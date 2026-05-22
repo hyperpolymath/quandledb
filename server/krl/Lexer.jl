@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-# (PMPL-1.0-or-later preferred; MPL-2.0 for Julia ecosystem consistency)
+# (MPL-2.0 preferred; MPL-2.0 for Julia ecosystem consistency)
 # Copyright (c) 2026 Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
 
 """

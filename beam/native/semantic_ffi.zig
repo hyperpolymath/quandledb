@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: PMPL-1.0-or-later
+// SPDX-License-Identifier: MPL-2.0
 //
 // Local mirror of ../../src/ffi/semantic_ffi.zig for BEAM native builds.
 // Keep this file interface-compatible with the shared semantic FFI contract.

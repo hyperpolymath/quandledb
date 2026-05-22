@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: PMPL-1.0-or-later
+// SPDX-License-Identifier: MPL-2.0
 // Copyright (c) 2026 Jonathan D.A. Jewell (hyperpolymath) <j.d.a.jewell@open.ac.uk>
 
 = EXPLAINME — QuandleDB
@@ -22,7 +22,7 @@ This project *does* the following:
   specifically for semantic queries, keeping raw-diagram storage in Skein
 * Idris2 ABI type layer for the semantic API
 * Zig FFI layer for the semantic API (C-compatible)
-* V-lang API wrappers
+* zig API wrappers
 * Elixir BEAM NIF bindings
 
 This project *does NOT* do the following:

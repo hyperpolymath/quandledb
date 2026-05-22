@@ -1,4 +1,4 @@
-<!-- SPDX-License-Identifier: PMPL-1.0-or-later -->
+<!-- SPDX-License-Identifier: MPL-2.0 -->
 <!-- Copyright (c) 2026 Jonathan D.A. Jewell (hyperpolymath) <j.d.a.jewell@open.ac.uk> -->
 
 # Changelog — QuandleDB
@@ -34,7 +34,7 @@ History preserved in the absorption commit message.
   extraction, canonicalisation, descriptor hashing (SHA-256)
 - `src/abi/Types.idr`: Idris2 ABI type layer
 - `src/ffi/semantic_ffi.zig`: Zig FFI layer
-- `src/api/*.v`: V-lang API triples
+- `src/api/*.v`: zig API triples
 - `beam/`: Elixir BEAM client with NIFs
 
 ### Prior history (pre-absorption)

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: PMPL-1.0-or-later
+# SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2026 Jonathan D.A. Jewell (hyperpolymath) <j.d.a.jewell@open.ac.uk>
 #
 # quandledb package manifest — OPSM native.
@@ -7,7 +7,7 @@
 [package]
 name = "quandledb"
 description = "QuandleDB — algebraic database using quandle structures for semantic identity"
-license = "PMPL-1.0-or-later"
+license = "MPL-2.0"
 authors = ["Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>"]
 keywords = ["quandledb", "hyperpolymath", "nextgen-databases", "database"]
 homepage = "https://github.com/hyperpolymath/nextgen-databases"

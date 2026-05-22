@@ -1,4 +1,4 @@
-<!-- SPDX-License-Identifier: PMPL-1.0-or-later -->
+<!-- SPDX-License-Identifier: MPL-2.0 -->
 <!-- Copyright (c) 2026 Jonathan D.A. Jewell (hyperpolymath) <j.d.a.jewell@open.ac.uk> -->
 
 # Component Readiness — QuandleDB
@@ -11,7 +11,7 @@
 
 Works on some things + partial RSR compliance. QuandleDB is a polyglot project:
 Julia HTTP server (Skein.jl wrapper) + Julia semantic sidecar + Idris2 ABI +
-Zig FFI + V-lang API + Elixir BEAM NIFs.
+Zig FFI + zig API + Elixir BEAM NIFs.
 
 ### Evidence
 
@@ -21,7 +21,7 @@ Zig FFI + V-lang API + Elixir BEAM NIFs.
   - `server/quandle_semantic.jl` — QuandleSemantic module (presentation extraction + hashing)
   - `src/abi/Types.idr` — Idris2 ABI type layer
   - `src/ffi/semantic_ffi.zig` — Zig FFI layer
-  - `src/api/*.v` — V-lang API triples
+  - `src/api/*.v` — zig API triples
   - `beam/` — Elixir BEAM client with NIFs
 - **RSR compliance:** Partial. Has 5 per-directory READMEs. 0-AI-MANIFEST.a2ml
   present (template). `.machine_readable/6a2/` directory exists.
@@ -49,7 +49,7 @@ Zig FFI + V-lang API + Elixir BEAM NIFs.
 4. Add per-language READMEs at `src/abi/`, `src/ffi/`, `src/api/`, `beam/`
    explaining what each layer contributes.
 5. Demonstrate a full-stack dogfood: invoke Idris2 ABI-verified call, through
-   Zig FFI, via V-lang API, hitting Julia server, surfacing via BEAM NIF, and
+   Zig FFI, via zig API, hitting Julia server, surfacing via BEAM NIF, and
    have a real test assert on it.
 
 ## Review cycle

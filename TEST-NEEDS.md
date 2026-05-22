@@ -1,4 +1,4 @@
-<!-- SPDX-License-Identifier: PMPL-1.0-or-later -->
+<!-- SPDX-License-Identifier: MPL-2.0 -->
 <!-- Copyright (c) 2026 Jonathan D.A. Jewell (hyperpolymath) <j.d.a.jewell@open.ac.uk> -->
 
 # TEST-NEEDS — QuandleDB
@@ -13,7 +13,7 @@ Honest accounting of test coverage across the polyglot stack.
 | Julia semantic index integration | 12 | `server/test_semantic_index.jl` |
 | Idris2 ABI | — | none |
 | Zig FFI | — | none |
-| V-lang API | — | none |
+| zig API | — | none |
 | BEAM NIFs | declared | `beam/test/quandle_db_nif_test.exs`, `beam/test/quandle_db_nif_live_integration_test.exs` (not run in estate-wide sweep) |
 | Full-stack (Idris → Zig → V → Julia → BEAM) | — | none |
 
