@@ -443,4 +443,79 @@ end
     @test f.homfly_polynomial != c.homfly_polynomial
 end
 
+# ---------------------------------------------------------------------------
+# § 15. QD-7 — Canonical-form ordering totality (structural assertion)
+#
+# The `sort(...; by = r -> (r.lhs, r.rhs, r.out, r.is_inverse ? 1 : 0))`
+# in `canonicalize_presentation` assumes the comparator tuple captures
+# every relation field that affects quandle equality. The
+# `QuandleRelation` struct has exactly four fields by definition; if a
+# fifth field is added without updating the canonicaliser, the
+# canonical form would silently lose discrimination.
+#
+# This testset is a STRUCTURAL guard against that. Addresses
+# PROOF-NARRATIVE.md QD-7 and assumption A-QD-7.1.
+# ---------------------------------------------------------------------------
+
+@testset "QD-7: QuandleRelation has exactly 4 fields (canonical-order totality)" begin
+    @test fieldcount(QuandleRelation) == 4
+
+    fields = Set(fieldnames(QuandleRelation))
+    @test fields == Set([:lhs, :rhs, :out, :is_inverse])
+
+    r1 = QuandleRelation(1, 2, 3, false)
+    r2 = QuandleRelation(1, 2, 3, false)
+    @test r1 == r2
+
+    r_diff_lhs   = QuandleRelation(9, 2, 3, false)
+    r_diff_rhs   = QuandleRelation(1, 9, 3, false)
+    r_diff_out   = QuandleRelation(1, 2, 9, false)
+    r_diff_inv   = QuandleRelation(1, 2, 3, true)
+    @test r1 != r_diff_lhs
+    @test r1 != r_diff_rhs
+    @test r1 != r_diff_out
+    @test r1 != r_diff_inv
+end
+
+# ---------------------------------------------------------------------------
+# § 16. QD-3 (partial) — Canonical form is invariant under relation reordering
+#
+# `_dihedral_colouring_count(p, modulus)` builds a sparse linear system
+# from `p.relations`. The order of relations affects pivot selection
+# but must NOT affect the canonical form (and hence the count).
+#
+# Test: for each standard knot, shuffle relations deterministically
+# and assert the canonical-presentation blob agrees with the unshuffled
+# canonical form.
+#
+# Addresses PROOF-NARRATIVE.md QD-3 (relation-order half) and
+# PROOF-NEEDS.md M4. The full iso-class half (different PRESENTATIONS
+# of the same fundamental quandle) requires constructing distinct PDs
+# of the same knot — partial coverage already via §6 R2 invariance.
+# ---------------------------------------------------------------------------
+
+@testset "QD-3 (partial): canonical form invariant under relation reordering" begin
+    rng = MersenneTwister(0xDEADBEEF)
+    for (pd, label) in [
+        (trefoil().pd, "trefoil"),
+        (figure_eight().pd, "figure-eight"),
+        (cinquefoil().pd, "cinquefoil"),
+    ]
+        @testset label begin
+            pres = extract_presentation(pd)
+            base_blob = canonical_presentation_blob(canonicalize_presentation(pres))
+
+            for trial in 1:8
+                shuffled_relations = shuffle(rng, copy(pres.relations))
+                shuffled_pres = QuandlePresentation(
+                    pres.generator_count,
+                    shuffled_relations,
+                )
+                canon = canonicalize_presentation(shuffled_pres)
+                @test canonical_presentation_blob(canon) == base_blob
+            end
+        end
+    end
+end
+
 println("quandle-axiom-tests-ok")
