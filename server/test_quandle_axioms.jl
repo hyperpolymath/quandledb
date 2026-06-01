@@ -160,6 +160,12 @@ end
     )
 
     simplified = r1_simplify(pd_with_kink)
+
+    # B8: assert strict reduction (length(t_pd) < length(pd_with_kink), so
+    # a passing r1_simplify must produce length(simplified) < length(pd_with_kink),
+    # not merely == length(t_pd)). The previous == check would silently pass
+    # if r1_simplify did nothing — see PROOF-NARRATIVE.md bug audit B8.
+    @test length(simplified.crossings) < length(pd_with_kink.crossings)
     @test length(simplified.crossings) == length(t_pd.crossings)
 
     # Coloring counts for the diagram before and after R1:
@@ -245,6 +251,56 @@ end
     ]
     keys = [d.quandle_key for d in descriptors]
     @test length(unique(keys)) == length(keys)
+end
+
+# ---------------------------------------------------------------------------
+# § 9. Union-find traversal-order independence (QD-9)
+#
+# `_wirtinger_arc_to_generator` walks `pd.crossings` and unions arc
+# equivalence classes. Shuffling the crossing order MUST yield the same
+# `generator_count` and (up to canonical relabelling) the same
+# canonical_presentation_blob. Otherwise the descriptor depends on
+# array layout — a reproducibility hazard.
+#
+# Addresses PROOF-NARRATIVE.md QD-9 and assumptions A-QD-9.1, A-QD-9.2.
+# ---------------------------------------------------------------------------
+
+using Random
+
+@testset "QD-9: union-find traversal-order independence" begin
+    for (pd, label) in [
+        (trefoil().pd, "trefoil"),
+        (figure_eight().pd, "figure-eight"),
+        (cinquefoil().pd, "cinquefoil"),
+    ]
+        @testset label begin
+            base_pres = extract_presentation(pd)
+            base_blob = canonical_presentation_blob(base_pres)
+            base_desc = quandle_descriptor(pd)
+
+            rng = MersenneTwister(0xC0FFEE)
+            for trial in 1:8
+                shuffled_crossings = shuffle(rng, copy(pd.crossings))
+                shuffled_pd = PlanarDiagram(shuffled_crossings, pd.components)
+
+                # Generator count must match the original.
+                shuffled_pres = extract_presentation(shuffled_pd)
+                @test shuffled_pres.generator_count == base_pres.generator_count
+
+                # Canonical presentation blob is invariant under crossing
+                # shuffle (up to the canonical relabelling step in
+                # canonicalize_presentation, which is itself the test target).
+                @test canonical_presentation_blob(shuffled_pres) == base_blob
+
+                # All descriptor fingerprints must be stable.
+                shuffled_desc = quandle_descriptor(shuffled_pd)
+                @test shuffled_desc.presentation_hash == base_desc.presentation_hash
+                @test shuffled_desc.colouring_count_3 == base_desc.colouring_count_3
+                @test shuffled_desc.colouring_count_5 == base_desc.colouring_count_5
+                @test shuffled_desc.quandle_key == base_desc.quandle_key
+            end
+        end
+    end
 end
 
 println("quandle-axiom-tests-ok")
