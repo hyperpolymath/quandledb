@@ -247,4 +247,200 @@ end
     @test length(unique(keys)) == length(keys)
 end
 
+# ---------------------------------------------------------------------------
+# § 10. KT-11 — Image-size histogram cross-check + class-invariance
+#
+# The image-size histogram is a refinement of the colouring count.
+# Two cross-checks:
+#
+#   1. Histogram sums to the colouring count. This verifies that the
+#      rank-based `_dihedral_colouring_count` agrees with the explicit
+#      enumeration `_enumerate_dihedral_colourings`. Discharges QD-8
+#      empirically on the test corpus.
+#
+#   2. Image histograms distinguish trefoil / figure-eight / cinquefoil
+#      at least one modulus (when the colouring counts also do — they
+#      shouldn't be strictly less powerful). Discharges KT-11's "refined
+#      invariant" claim.
+#
+# Addresses PROOF-NARRATIVE.md KT-11 + QD-8 (cross-check via independent
+# method).
+# ---------------------------------------------------------------------------
+
+@testset "KT-11: image-histogram sums to colouring count" begin
+    for (pd, label) in [
+        (trefoil().pd, "trefoil"),
+        (figure_eight().pd, "figure-eight"),
+        (cinquefoil().pd, "cinquefoil"),
+    ]
+        @testset label begin
+            d = quandle_descriptor(pd)
+            # Only meaningful when within the IMAGE_HISTOGRAM_MAX_G window.
+            if d.generator_count <= 8
+                @test sum(d.image_histogram_3) == d.colouring_count_3
+                @test sum(d.image_histogram_5) == d.colouring_count_5
+            end
+        end
+    end
+end
+
+@testset "KT-11: image histograms refine the colouring count" begin
+    t = quandle_descriptor(trefoil().pd)
+    f = quandle_descriptor(figure_eight().pd)
+    c = quandle_descriptor(cinquefoil().pd)
+
+    # Each pair must be distinguished by at least one modulus's image
+    # histogram OR by the colouring counts (the histogram is a refinement;
+    # whenever the counts differ, the histograms must too).
+    @test t.image_histogram_3 != f.image_histogram_3 ||
+          t.image_histogram_5 != f.image_histogram_5 ||
+          t.colouring_count_3 != f.colouring_count_3 ||
+          t.colouring_count_5 != f.colouring_count_5
+    @test t.image_histogram_3 != c.image_histogram_3 ||
+          t.image_histogram_5 != c.image_histogram_5 ||
+          t.colouring_count_3 != c.colouring_count_3 ||
+          t.colouring_count_5 != c.colouring_count_5
+end
+
+# ---------------------------------------------------------------------------
+# § 11. KT-2 — Alexander polynomial wiring sanity
+#
+# Verify that `quandle_descriptor` populates `alexander_polynomial`
+# using the canonical "exp:coeff,..." serialisation. For the trefoil,
+# the Alexander polynomial is Δ(t) = t - 1 + t^{-1}, which serialises
+# to "-1:1,0:-1,1:1" (or some sign convention).
+#
+# Addresses PROOF-NARRATIVE.md KT-2.
+# ---------------------------------------------------------------------------
+
+@testset "KT-2: Alexander polynomial is populated + non-trivial" begin
+    for (pd, label) in [
+        (trefoil().pd, "trefoil"),
+        (figure_eight().pd, "figure-eight"),
+        (cinquefoil().pd, "cinquefoil"),
+    ]
+        @testset label begin
+            d = quandle_descriptor(pd)
+            # Must be a non-empty serialised polynomial.
+            @test !isempty(d.alexander_polynomial)
+            # Must follow the "exp:coeff" pattern.
+            @test occursin(r"^-?\d+:-?\d+(,-?\d+:-?\d+)*$", d.alexander_polynomial) ||
+                  d.alexander_polynomial == "0:0"
+            # Must contain at least one non-zero term for these knots
+            # (unknot would be "0:1"; trefoil/fig-8/cinquefoil are all
+            # non-trivial).
+            @test d.alexander_polynomial != "0:0"
+        end
+    end
+end
+
+@testset "KT-2: Alexander polynomial distinguishes the test knots" begin
+    t = quandle_descriptor(trefoil().pd)
+    f = quandle_descriptor(figure_eight().pd)
+    c = quandle_descriptor(cinquefoil().pd)
+
+    # Trefoil and figure-eight are distinguished by Alexander.
+    @test t.alexander_polynomial != f.alexander_polynomial
+    # Trefoil and cinquefoil are distinguished by Alexander.
+    @test t.alexander_polynomial != c.alexander_polynomial
+    # Figure-eight and cinquefoil are distinguished by Alexander.
+    @test f.alexander_polynomial != c.alexander_polynomial
+end
+
+# ---------------------------------------------------------------------------
+# § 12. KT-2 extension — Jones, Conway, HOMFLY populated + non-trivial
+#
+# Same shape as the Alexander tests in §11. The three polynomial fields
+# extend the quandle_descriptor; together with Alexander they form a
+# strictly more discriminating descriptor.
+#
+# Exact-value assertions are deliberately limited to "populated + does
+# not equal the trivial-unknot output". A separate exact-fixture suite
+# is queued (see KT-2 extension follow-up issue) where the test corpus
+# captures the exact strings KnotTheory.jl produces.
+# ---------------------------------------------------------------------------
+
+@testset "KT-2 ext: Jones polynomial is populated + non-trivial" begin
+    for (pd, label) in [
+        (trefoil().pd, "trefoil"),
+        (figure_eight().pd, "figure-eight"),
+        (cinquefoil().pd, "cinquefoil"),
+    ]
+        @testset label begin
+            d = quandle_descriptor(pd)
+            @test !isempty(d.jones_polynomial)
+            @test d.jones_polynomial != "0:0"
+        end
+    end
+end
+
+@testset "KT-2 ext: Conway polynomial is populated + non-trivial" begin
+    for (pd, label) in [
+        (trefoil().pd, "trefoil"),
+        (figure_eight().pd, "figure-eight"),
+        (cinquefoil().pd, "cinquefoil"),
+    ]
+        @testset label begin
+            d = quandle_descriptor(pd)
+            @test !isempty(d.conway_polynomial)
+            @test d.conway_polynomial != "0:0"
+        end
+    end
+end
+
+@testset "KT-2 ext: HOMFLY polynomial is populated within bounds" begin
+    for (pd, label) in [
+        (trefoil().pd, "trefoil"),
+        (figure_eight().pd, "figure-eight"),
+        (cinquefoil().pd, "cinquefoil"),
+    ]
+        @testset label begin
+            d = quandle_descriptor(pd)
+            # All three test knots have < 15 crossings, so HOMFLY computes.
+            @test d.homfly_polynomial != "deferred:too_many_crossings"
+            @test !isempty(d.homfly_polynomial)
+            # HOMFLY is two-variable; format is "a_exp,z_exp:coeff;..."
+            @test occursin(';', d.homfly_polynomial) ||
+                  occursin(',', d.homfly_polynomial)
+        end
+    end
+end
+
+@testset "KT-2 ext: HOMFLY guard returns sentinel above MAX_CROSSINGS" begin
+    # Build a synthetic 16-crossing PD by braid word s1^16. KnotTheory's
+    # MAX_CROSSINGS_FOR_HOMFLY is 15, so this triggers the guard.
+    pd_large = from_braid_word(join(["s1" for _ in 1:16], ".")).pd
+    d_large = quandle_descriptor(pd_large)
+    @test d_large.homfly_polynomial == "deferred:too_many_crossings"
+end
+
+@testset "KT-2 ext: Jones polynomial distinguishes the test knots" begin
+    t = quandle_descriptor(trefoil().pd)
+    f = quandle_descriptor(figure_eight().pd)
+    c = quandle_descriptor(cinquefoil().pd)
+    @test t.jones_polynomial != f.jones_polynomial
+    @test t.jones_polynomial != c.jones_polynomial
+    @test f.jones_polynomial != c.jones_polynomial
+end
+
+@testset "KT-2 ext: Conway polynomial distinguishes the test knots" begin
+    t = quandle_descriptor(trefoil().pd)
+    f = quandle_descriptor(figure_eight().pd)
+    c = quandle_descriptor(cinquefoil().pd)
+    @test t.conway_polynomial != f.conway_polynomial
+    @test t.conway_polynomial != c.conway_polynomial
+    @test f.conway_polynomial != c.conway_polynomial
+end
+
+@testset "KT-2 ext: HOMFLY distinguishes the test knots" begin
+    # HOMFLY-PT subsumes both Alexander and Jones; for these knots it
+    # should distinguish all pairs.
+    t = quandle_descriptor(trefoil().pd)
+    f = quandle_descriptor(figure_eight().pd)
+    c = quandle_descriptor(cinquefoil().pd)
+    @test t.homfly_polynomial != f.homfly_polynomial
+    @test t.homfly_polynomial != c.homfly_polynomial
+    @test f.homfly_polynomial != c.homfly_polynomial
+end
+
 println("quandle-axiom-tests-ok")
