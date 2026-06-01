@@ -623,4 +623,59 @@ end
     end
 end
 
+# ---------------------------------------------------------------------------
+# § 17. KT-2 extension — exact-value fixtures (Alexander + Conway)
+#
+# The §11/§12 tests check that polynomial fields are populated and that
+# the three standard knots are pairwise distinguished. These properties
+# are necessary but weak — a buggy polynomial that happens to be
+# distinct across our three knots would still pass.
+#
+# This testset pins exact-value fixtures for polynomials whose values
+# are mathematically standard and verified against upstream:
+#
+#   * Alexander for the trefoil — confirmed by Skein.jl test fixture in
+#     `Skein.jl/ext/KnotTheoryExt.jl` ("-1:1,0:-1,1:1").
+#   * Conway for trefoil / figure-eight / cinquefoil — confirmed by
+#     `KnotTheory.jl/test/runtests.jl` ("0:1,2:1", "0:1,2:-1",
+#     "0:1,2:3,4:1").
+#
+# Jones and HOMFLY exact values are deliberately NOT pinned: the
+# 2026-06-01 audit Agent could not verify them against KnotTheory.jl
+# test fixtures (no exact-value assertions exist upstream), and
+# sign-convention ambiguity (right-handed vs left-handed trefoil) makes
+# guessing brittle. They stay covered by the "populated + distinguishes"
+# tests in §12 until upstream fixtures are added.
+#
+# Addresses PROOF-NARRATIVE.md §3 KT-2 and the follow-up issue #32
+# (KT-2 extension exact-fixture suite).
+# ---------------------------------------------------------------------------
+
+@testset "KT-2 ext: Alexander polynomial exact-value fixture (trefoil)" begin
+    t = quandle_descriptor(trefoil().pd)
+    # Trefoil Alexander = t^{-1} - 1 + t = -1:1, 0:-1, 1:1
+    # Verified against Skein.jl/ext/KnotTheoryExt.jl test fixture.
+    @test t.alexander_polynomial == "-1:1,0:-1,1:1"
+end
+
+@testset "KT-2 ext: Conway polynomial exact-value fixtures" begin
+    # Trefoil ∇(z) = 1 + z² → "0:1,2:1"
+    # Confirmed against KnotTheory.jl/test/runtests.jl line ~278.
+    t = quandle_descriptor(trefoil().pd)
+    @test t.conway_polynomial == "0:1,2:1"
+
+    # Figure-eight ∇(z) = 1 - z² → "0:1,2:-1"
+    f = quandle_descriptor(figure_eight().pd)
+    @test f.conway_polynomial == "0:1,2:-1"
+
+    # Cinquefoil ∇(z) = 1 + 3z² + z⁴ → "0:1,2:3,4:1"
+    c = quandle_descriptor(cinquefoil().pd)
+    @test c.conway_polynomial == "0:1,2:3,4:1"
+end
+
+# Sanity: if a future change updates the polynomial-serialisation
+# format, these fixtures will fail loudly. That's intentional —
+# any format change must be a deliberate Skein.jl compatibility break,
+# not an accident.
+
 println("quandle-axiom-tests-ok")
