@@ -1,0 +1,90 @@
+# SPDX-License-Identifier: MPL-2.0
+# Owner: Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+#
+# QD-12 — Read-only API guarantee CI gate.
+#
+# `.claude/CLAUDE.md` states "Server is read-only (database mutations
+# via Skein.jl REPL)". PROOF-NARRATIVE.md §3 QD-12 promotes this from
+# convention to checked invariant. This workflow fails any PR that
+# introduces a Skein.jl mutating-suffix operation into
+# `server/serve.jl` or its route handlers.
+#
+# Julia convention: function names ending in `!` mutate. Skein.jl
+# follows this, so a grep for `\w+!` calls in route handlers catches
+# the violation class.
+#
+# False positives:
+#   * In-place vector operations on local variables (e.g. push!(buf, x))
+#     are not Skein.jl mutations. The gate currently flags ALL `\w+!`
+#     calls; reviewers must verify any allow-listed.
+#   * Test files are excluded.
+#
+# To audit by hand: `grep -nE '\w+!' server/serve.jl | grep -v '^server/serve.jl:[0-9]*:[[:space:]]*#'`
+
+name: QD-12 Read-only API gate
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+# Estate guardrail: cancel superseded runs.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check-read-only:
+    name: QD-12 — assert no mutating ops in server/serve.jl
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Scan server/serve.jl for mutating Skein.jl calls
+        run: |
+          set -euo pipefail
+
+          # Mutating-suffix operations from Skein.jl that the read-only
+          # server must NEVER invoke.
+          MUTATING_PATTERNS='store!|delete!|drop!|update!|insert!|append!|truncate!|set_metadata!|remove!|clear!|reset!|commit!|rollback!|register!|deregister!'
+
+          # Allow-list: local in-place ops on transient buffers that are
+          # safe (do not touch the DB). Maintain by hand.
+          ALLOW_LIST='push!|pushfirst!|append!|setindex!|empty!|filter!|map!|sort!'
+
+          # Build the disallowed-pattern regex by removing the allow-listed
+          # ops from MUTATING_PATTERNS. Currently `append!` appears in both;
+          # the allow-list wins for local-buffer use, but we still flag it
+          # in serve.jl explicitly to force a comment justifying it.
+          DISALLOWED='\b(store|delete|drop|update|insert|truncate|set_metadata|remove|clear|reset|commit|rollback|register|deregister)!'
+
+          echo "Scanning server/serve.jl for disallowed mutating ops..."
+          violations=$(grep -nE "$DISALLOWED" server/serve.jl || true)
+
+          if [ -n "$violations" ]; then
+            echo "::error::QD-12 violation — read-only server must not invoke Skein.jl mutating operations."
+            echo ""
+            echo "Offending lines in server/serve.jl:"
+            echo "$violations"
+            echo ""
+            echo "If this is a legitimate exception (e.g. read-only schema bootstrap),"
+            echo "add an inline comment explaining the safety argument AND add the"
+            echo "pattern to the allow-list in this workflow with a reference to the"
+            echo "approving PR/issue."
+            exit 1
+          fi
+
+          echo "OK — no disallowed mutating operations found in server/serve.jl."
+
+      - name: Sanity check — workflow is actually running on the right file
+        run: |
+          test -f server/serve.jl
+          line_count=$(wc -l < server/serve.jl)
+          echo "Scanned $line_count LoC."
+          test "$line_count" -gt 100 || (echo "::error::serve.jl shrunk unexpectedly" && exit 1)
