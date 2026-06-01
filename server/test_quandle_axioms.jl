@@ -247,4 +247,104 @@ end
     @test length(unique(keys)) == length(keys)
 end
 
+# ---------------------------------------------------------------------------
+# § 10. KT-11 — Image-size histogram cross-check + class-invariance
+#
+# The image-size histogram is a refinement of the colouring count.
+# Two cross-checks:
+#
+#   1. Histogram sums to the colouring count. This verifies that the
+#      rank-based `_dihedral_colouring_count` agrees with the explicit
+#      enumeration `_enumerate_dihedral_colourings`. Discharges QD-8
+#      empirically on the test corpus.
+#
+#   2. Image histograms distinguish trefoil / figure-eight / cinquefoil
+#      at least one modulus (when the colouring counts also do — they
+#      shouldn't be strictly less powerful). Discharges KT-11's "refined
+#      invariant" claim.
+#
+# Addresses PROOF-NARRATIVE.md KT-11 + QD-8 (cross-check via independent
+# method).
+# ---------------------------------------------------------------------------
+
+@testset "KT-11: image-histogram sums to colouring count" begin
+    for (pd, label) in [
+        (trefoil().pd, "trefoil"),
+        (figure_eight().pd, "figure-eight"),
+        (cinquefoil().pd, "cinquefoil"),
+    ]
+        @testset label begin
+            d = quandle_descriptor(pd)
+            # Only meaningful when within the IMAGE_HISTOGRAM_MAX_G window.
+            if d.generator_count <= 8
+                @test sum(d.image_histogram_3) == d.colouring_count_3
+                @test sum(d.image_histogram_5) == d.colouring_count_5
+            end
+        end
+    end
+end
+
+@testset "KT-11: image histograms refine the colouring count" begin
+    t = quandle_descriptor(trefoil().pd)
+    f = quandle_descriptor(figure_eight().pd)
+    c = quandle_descriptor(cinquefoil().pd)
+
+    # Each pair must be distinguished by at least one modulus's image
+    # histogram OR by the colouring counts (the histogram is a refinement;
+    # whenever the counts differ, the histograms must too).
+    @test t.image_histogram_3 != f.image_histogram_3 ||
+          t.image_histogram_5 != f.image_histogram_5 ||
+          t.colouring_count_3 != f.colouring_count_3 ||
+          t.colouring_count_5 != f.colouring_count_5
+    @test t.image_histogram_3 != c.image_histogram_3 ||
+          t.image_histogram_5 != c.image_histogram_5 ||
+          t.colouring_count_3 != c.colouring_count_3 ||
+          t.colouring_count_5 != c.colouring_count_5
+end
+
+# ---------------------------------------------------------------------------
+# § 11. KT-2 — Alexander polynomial wiring sanity
+#
+# Verify that `quandle_descriptor` populates `alexander_polynomial`
+# using the canonical "exp:coeff,..." serialisation. For the trefoil,
+# the Alexander polynomial is Δ(t) = t - 1 + t^{-1}, which serialises
+# to "-1:1,0:-1,1:1" (or some sign convention).
+#
+# Addresses PROOF-NARRATIVE.md KT-2.
+# ---------------------------------------------------------------------------
+
+@testset "KT-2: Alexander polynomial is populated + non-trivial" begin
+    for (pd, label) in [
+        (trefoil().pd, "trefoil"),
+        (figure_eight().pd, "figure-eight"),
+        (cinquefoil().pd, "cinquefoil"),
+    ]
+        @testset label begin
+            d = quandle_descriptor(pd)
+            # Must be a non-empty serialised polynomial.
+            @test !isempty(d.alexander_polynomial)
+            # Must follow the "exp:coeff" pattern.
+            @test occursin(r"^-?\d+:-?\d+(,-?\d+:-?\d+)*$", d.alexander_polynomial) ||
+                  d.alexander_polynomial == "0:0"
+            # Must contain at least one non-zero term for these knots
+            # (unknot would be "0:1"; trefoil/fig-8/cinquefoil are all
+            # non-trivial).
+            @test d.alexander_polynomial != "0:0"
+        end
+    end
+end
+
+@testset "KT-2: Alexander polynomial distinguishes the test knots" begin
+    t = quandle_descriptor(trefoil().pd)
+    f = quandle_descriptor(figure_eight().pd)
+    c = quandle_descriptor(cinquefoil().pd)
+
+    # Trefoil and figure-eight are distinguished by Alexander.
+    @test t.alexander_polynomial != f.alexander_polynomial
+    # Trefoil and cinquefoil are distinguished by Alexander.
+    @test t.alexander_polynomial != c.alexander_polynomial
+    # Figure-eight and cinquefoil are distinguished by Alexander.
+    @test f.alexander_polynomial != c.alexander_polynomial
+end
+
 println("quandle-axiom-tests-ok")

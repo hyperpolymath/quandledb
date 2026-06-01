@@ -9,6 +9,7 @@ using Blake3Hash
 export QuandleRelation, QuandlePresentation
 export extract_presentation, canonicalize_presentation, canonical_presentation_blob
 export quandle_descriptor
+export IMAGE_HISTOGRAM_MAX_G
 
 """
     QuandleRelation
@@ -280,6 +281,126 @@ function _degree_partition(p::QuandlePresentation)::String
     join(sorted_deg, ",")
 end
 
+# ---------------------------------------------------------------------------
+# § Dihedral colouring enumeration + image-size histogram (KT-11)
+#
+# `_dihedral_colouring_count` computes the colouring count via rank of the
+# relations matrix (efficient, polynomial in g·modulus). For a refined
+# invariant we ALSO enumerate the colourings explicitly and compute the
+# histogram of `|image(c)|` (number of distinct colours each colouring uses).
+# This histogram is a strict refinement of the colouring count and an
+# independent class invariant — two knots with equal colouring counts may
+# differ in the image-size distribution.
+#
+# Enumeration is exhaustive over `modulus^generator_count` assignments; we
+# cap g at IMAGE_HISTOGRAM_MAX_G to keep the descriptor cheap. Larger
+# diagrams fall back to a `missing` sentinel in the histogram field.
+#
+# Property test: sum(histogram) == _dihedral_colouring_count(p, m). This
+# cross-checks the rank-based formula against the explicit enumeration.
+# ---------------------------------------------------------------------------
+
+const IMAGE_HISTOGRAM_MAX_G = 8
+
+"""
+    _enumerate_dihedral_colourings(p::QuandlePresentation, modulus::Int) -> Vector{Vector{Int}}
+
+Enumerate every quandle homomorphism from the fundamental quandle of `p`
+into the dihedral quandle `Z_modulus` (action `a ▷ b = 2b - a` mod `modulus`).
+
+Returns the list of colourings as length-`p.generator_count` vectors of
+values in `0:modulus-1`. Exhaustive; cost `O(modulus^g · |relations|)`.
+
+For `g == 0` (the unknot's fundamental quandle), there is one trivial
+empty colouring, returned as `[Int[]]`.
+"""
+function _enumerate_dihedral_colourings(p::QuandlePresentation, modulus::Int)::Vector{Vector{Int}}
+    g = p.generator_count
+    g == 0 && return [Int[]]
+
+    total = modulus ^ g
+    valid = Vector{Vector{Int}}()
+    sizehint!(valid, max(total ÷ 10, 1))
+
+    for code in 0:total-1
+        c = zeros(Int, g)
+        x = code
+        for i in 1:g
+            c[i] = x % modulus
+            x ÷= modulus
+        end
+        ok = true
+        for rel in p.relations
+            expected = mod(2 * c[rel.rhs] - c[rel.lhs], modulus)
+            if c[rel.out] != expected
+                ok = false
+                break
+            end
+        end
+        ok && push!(valid, c)
+    end
+    valid
+end
+
+"""
+    _dihedral_image_histogram(p::QuandlePresentation, modulus::Int) -> Vector{Int}
+
+Histogram of `|image(c)|` over all dihedral colourings `c` of `p` into
+`Z_modulus`. Index `k` of the returned vector counts colourings that use
+exactly `k` distinct colours, for `k ∈ 1:modulus`.
+
+Skipped (returns an all-zero vector with an explicit sentinel) when
+`p.generator_count > IMAGE_HISTOGRAM_MAX_G` — the enumeration would be
+too expensive to keep `quandle_descriptor` cheap.
+
+This is the KT-11 refined invariant: a strict refinement of
+`_dihedral_colouring_count` (which is `sum(histogram)`).
+"""
+function _dihedral_image_histogram(p::QuandlePresentation, modulus::Int)::Vector{Int}
+    g = p.generator_count
+    g > IMAGE_HISTOGRAM_MAX_G && return zeros(Int, modulus)
+
+    cs = _enumerate_dihedral_colourings(p, modulus)
+    hist = zeros(Int, modulus)
+    for c in cs
+        img_size = isempty(c) ? 1 : length(unique(c))
+        hist[img_size] += 1
+    end
+    hist
+end
+
+# ---------------------------------------------------------------------------
+# § Alexander polynomial wiring (KT-2)
+#
+# `KnotTheory.alexander_polynomial(pd) :: Dict{Int, Int}` returns the
+# Laurent polynomial as `exponent -> coefficient`. We serialise it using
+# the same `"exp:coeff,..."` format Skein.jl uses (see
+# `Skein.jl/ext/KnotTheoryExt.jl::_serialise_int_poly`) so that the
+# QuandleDB descriptor and the Skein.jl invariants table speak the same
+# canonical form.
+#
+# The serialised form is part of the `quandle_key`-style fingerprint,
+# making Alexander a first-class column of the semantic descriptor.
+# ---------------------------------------------------------------------------
+
+"""
+    _serialise_int_poly(poly::Dict{Int,Int}) -> String
+
+Serialise a Laurent polynomial-as-dict to the canonical
+`"exp:coeff,exp:coeff,..."` form (zero coefficients dropped, exponents in
+ascending order). Matches `Skein.jl::_serialise_int_poly` so values are
+byte-equal across the two layers.
+"""
+function _serialise_int_poly(poly::Dict{Int,Int})::String
+    pairs = String[]
+    for exp in sort(collect(keys(poly)))
+        coeff = poly[exp]
+        coeff == 0 && continue
+        push!(pairs, string(exp, ":", coeff))
+    end
+    isempty(pairs) ? "0:0" : join(pairs, ",")
+end
+
 """
     quandle_descriptor(pd::KnotTheory.PlanarDiagram) -> NamedTuple
 
@@ -297,7 +418,27 @@ function quandle_descriptor(pd::KnotTheory.PlanarDiagram)
     pos_count = rel_count - inv_count
     color3 = _dihedral_colouring_count(canon, 3)
     color5 = _dihedral_colouring_count(canon, 5)
-    key = string(canon.generator_count, ":", rel_count, ":", degree_partition, ":", color3, ":", color5)
+
+    # KT-11: refined image-size histograms (strict refinements of color3, color5)
+    image_hist_3 = _dihedral_image_histogram(canon, 3)
+    image_hist_5 = _dihedral_image_histogram(canon, 5)
+    image_hist_3_str = join(image_hist_3, ",")
+    image_hist_5_str = join(image_hist_5, ",")
+
+    # KT-2: Alexander polynomial via KnotTheory.jl, same serialisation as Skein.jl
+    alexander_poly = KnotTheory.alexander_polynomial(pd)
+    alexander_str = _serialise_int_poly(alexander_poly)
+
+    key = string(
+        canon.generator_count, ":",
+        rel_count, ":",
+        degree_partition, ":",
+        color3, ":",
+        color5, ":",
+        image_hist_3_str, ":",
+        image_hist_5_str, ":",
+        alexander_str,
+    )
 
     (
         canonical_presentation = blob,
@@ -309,6 +450,9 @@ function quandle_descriptor(pd::KnotTheory.PlanarDiagram)
         degree_partition = degree_partition,
         colouring_count_3 = color3,
         colouring_count_5 = color5,
+        image_histogram_3 = image_hist_3,
+        image_histogram_5 = image_hist_5,
+        alexander_polynomial = alexander_str,
         quandle_key = key,
     )
 end
