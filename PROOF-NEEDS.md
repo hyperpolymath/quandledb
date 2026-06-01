@@ -1,5 +1,8 @@
-<!-- SPDX-License-Identifier: MPL-2.0 -->
-<!-- Copyright (c) 2026 Jonathan D.A. Jewell (hyperpolymath) <j.d.a.jewell@open.ac.uk> -->
+<!--
+SPDX-License-Identifier: MPL-2.0
+Copyright (c) 2026 Jonathan D.A. Jewell (hyperpolymath) <j.d.a.jewell@open.ac.uk>
+Owner: Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+-->
 
 # PROOF-NEEDS — QuandleDB
 
@@ -83,10 +86,74 @@ Current status: tested on well-formed inputs only. No fuzz on the NIF boundary.
 - **Zig's comptime** for layout assertions at the FFI boundary
 - **BEAM Dialyzer** for NIF typespec discipline
 
+## Implementation-level obligations (2026-06-01 audit extension)
+
+The original M1–M4 / S1–S3 obligations above are mathematical and
+systems contracts. The 2026-06-01 audit added implementation-level
+obligations that complete the proof narrative. Full statements with
+_why valuable_, status, explicit assumptions, and _how to discharge_
+are in [PROOF-NARRATIVE.md](PROOF-NARRATIVE.md). Summary:
+
+| # | Statement | Category | Priority | Effort | Status |
+|---|-----------|----------|----------|--------|--------|
+| QD-1 | `extract_presentation` well-formed on arbitrary connected PD codes | M | P1 | 3d | NOT STARTED (generalises Q-PresentationWF from 3 knots to full input space) |
+| QD-2 | R3 invariance | M | P1 | 5d (or upstream PR to KnotTheory.jl) | BLOCKED on `r3_simplify` (stated standing gap in M2) |
+| QD-3 | Colouring-count well-definedness | M | P1 | 2d | NOT STARTED (was M4) |
+| QD-4 | Fingerprint determinism across platforms | S | P2 | 1d (CI matrix) | NOT STARTED (was S1) |
+| QD-5 | Idris2 ABI ↔ Zig FFI layout agreement | ABI | P2 | 3d | NOT STARTED (was S2) |
+| QD-6 | BEAM NIF never crashes the VM | S | P1 | 1w (fuzz harness) | NOT STARTED (was S3) |
+| QD-7 | Canonical-form ordering is total | M | P3 | 1h (structural; see narrative) | NOT STARTED |
+| QD-8 | `_dihedral_colouring_count` correctness | M | P2 | 2d | NOT STARTED |
+| QD-9 | Union-find traversal-order independence | M / impl | P2 | 2h (shuffle test) | NOT STARTED |
+| QD-10 | KRL parser accepts exactly v0.1.0 grammar | M / impl | P1 | 4h (differential test) | NOT STARTED (cross-references KRL repo KR-6) |
+| QD-11 | SQL→KRL translation semantics-preserving | M / impl | P2 | 3d | NOT STARTED |
+| QD-12 | Read-only API guarantee | S | P3 | 1h (CI grep gate) | NOT STARTED |
+
+## Categories
+
+| Code | Meaning | Applies? |
+|------|---------|----------|
+| M | Mathematical obligations | Yes (M1–M4 + QD-1, QD-2, QD-3, QD-7, QD-8, QD-9, QD-10, QD-11) |
+| S | Systems obligations | Yes (S1–S3 + QD-4, QD-6, QD-12) |
+| ABI | ABI/FFI obligations | Yes (QD-5) |
+
 ## How to propose a new obligation
 
 1. State claim precisely.
 2. Classify: mathematical, systems, or contract.
 3. Either add property-based test as empirical evidence, OR write formal
    proof under `verification/` (create that dir if needed).
-4. Move to "Currently verified" section (to be created) when discharged.
+4. Add the narrative entry (statement, _why valuable_, status,
+   assumptions, _how to discharge_) to
+   [PROOF-NARRATIVE.md](PROOF-NARRATIVE.md). The assumptions block is
+   non-optional.
+5. Each new assumption gets an entry in
+   [ASSUMPTIONS.md](ASSUMPTIONS.md) with `A-QD-N.M` id and
+   MATH/DESIGN/EMPIRICAL/CRYPTO classification.
+6. Move to "Currently verified" section (to be created) when discharged.
+
+## Dangerous patterns (BANNED)
+
+CI rejects any PR introducing these:
+
+| Pattern | Language | Meaning |
+|---------|----------|---------|
+| `believe_me` | Idris2 | Unsafe cast |
+| `assert_total` | Idris2 | Skip totality check |
+| `postulate` | Idris2 / Agda | Unproven axiom |
+| `sorry` | Lean 4 | Incomplete proof |
+| `Admitted` | Coq | Incomplete proof |
+| `Obj.magic` | OCaml | Unsafe cast |
+| `unsafeCoerce` | Haskell | Unsafe cast |
+| `unsafe` (unaudited) | Rust / Zig | Unsafe block without safety comment |
+
+Enforced by `panic-attack assail --proofs-only`.
+
+## References
+
+- Algorithms: [`server/quandle_semantic.jl`](server/quandle_semantic.jl)
+- Tests: [`server/test_quandle_axioms.jl`](server/test_quandle_axioms.jl)
+- Companion narratives:
+  `hyperpolymath/krl/PROOF-NARRATIVE.md` — KRL surface
+  `hyperpolymath/tangle/PROOF-NARRATIVE.md` — Tangle semantic core
+
