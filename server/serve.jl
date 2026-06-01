@@ -71,6 +71,13 @@ const SEMANTIC_INDEX_STATEMENTS = [
     "CREATE INDEX IF NOT EXISTS idx_semantic_signature ON quandle_semantic_index(signature)",
     "CREATE INDEX IF NOT EXISTS idx_semantic_col3 ON quandle_semantic_index(colouring_count_3)",
     "CREATE INDEX IF NOT EXISTS idx_semantic_col5 ON quandle_semantic_index(colouring_count_5)",
+    # DB-3 Phase A additions (see docs/db-3-index-strategy.md):
+    # writhe / genus / quandle_generator_count are accepted as filter
+    # parameters in GET /api/knots and GET /api/semantic but were not
+    # indexed; queries forced O(n) scans. B-tree per the audit.
+    "CREATE INDEX IF NOT EXISTS idx_semantic_writhe ON quandle_semantic_index(writhe)",
+    "CREATE INDEX IF NOT EXISTS idx_semantic_genus ON quandle_semantic_index(genus)",
+    "CREATE INDEX IF NOT EXISTS idx_semantic_gencount ON quandle_semantic_index(quandle_generator_count)",
 ]
 
 const REQUIRED_SEMANTIC_COLUMNS = [
