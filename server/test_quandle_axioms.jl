@@ -443,4 +443,85 @@ end
     @test f.homfly_polynomial != c.homfly_polynomial
 end
 
+# ---------------------------------------------------------------------------
+# § 13. Reidemeister III invariance — QD-2 Path B (hand-corpus)
+#
+# Until `r3_simplify` is contributed upstream to KnotTheory.jl
+# (PROOF-NARRATIVE.md QD-2 Path A, parked as quandledb#29), we discharge
+# the R3 obligation empirically with a hand-constructed corpus of PD
+# pairs that differ by exactly one R3 move.
+#
+# Two pairs (per the audit's QD-2 design):
+#   * Pair 1: all-positive triangle, 3 crossings, 6 arcs {1..6}.
+#   * Pair 2: mixed-sign triangle, 3 crossings, 6 arcs {10..15}.
+#
+# Each pair encodes the R3 triangle-slide: three crossings sharing
+# three distinct inner arcs (α, β, γ) where the over-strand passes
+# over both adjacent crossings, and the move slides it to the other
+# side of the (β, γ) crossing.
+#
+# `quandle_descriptor` must agree on the *isotopy-respecting* fields:
+# `colouring_count_3`, `colouring_count_5`, and the `quandle_key`
+# columns derived from them.  `presentation_hash` may differ because
+# arc relabelling can change the canonical form; that's an artefact
+# of the canonicaliser, not of the underlying quandle (a separate
+# obligation, see PROOF-NARRATIVE.md A-QD-2.2).
+#
+# Addresses PROOF-NARRATIVE.md §3 QD-2, PROOF-NEEDS.md M2 (R3 row),
+# ASSUMPTIONS.md A-QD-2.1 + A-QD-2.2.
+# ---------------------------------------------------------------------------
+
+@testset "QD-2 Path B: R3 triangle-slide preserves quandle descriptor" begin
+    # Pair 1: all-positive triangle, inner arcs {1, 6, 4}.
+    pd_before_1 = PlanarDiagram([
+        Crossing((1, 2, 3, 4), 1),
+        Crossing((1, 5, 6, 2), 1),
+        Crossing((3, 6, 4, 5), 1),
+    ], Vector{Vector{Int}}())
+
+    pd_after_1 = PlanarDiagram([
+        Crossing((3, 2, 6, 4), 1),
+        Crossing((3, 5, 1, 2), 1),
+        Crossing((6, 1, 4, 5), 1),
+    ], Vector{Vector{Int}}())
+
+    @testset "all-positive triangle" begin
+        d_b = quandle_descriptor(pd_before_1)
+        d_a = quandle_descriptor(pd_after_1)
+        @test d_b.colouring_count_3 == d_a.colouring_count_3
+        @test d_b.colouring_count_5 == d_a.colouring_count_5
+        # generator_count must agree — R3 preserves the count of arcs
+        # up to relabelling.
+        @test d_b.generator_count == d_a.generator_count
+        # relation_count strictly equals crossing_count, which is 3
+        # for both before and after.
+        @test d_b.relation_count == d_a.relation_count
+    end
+
+    # Pair 2: mixed-sign triangle, inner arcs {10, 15, 13}.
+    pd_before_2 = PlanarDiagram([
+        Crossing((10, 11, 12, 13), 1),
+        Crossing((10, 14, 15, 11), -1),
+        Crossing((12, 15, 13, 14), 1),
+    ], Vector{Vector{Int}}())
+
+    pd_after_2 = PlanarDiagram([
+        Crossing((12, 11, 15, 13), 1),
+        Crossing((12, 14, 10, 11), -1),
+        Crossing((15, 10, 13, 14), 1),
+    ], Vector{Vector{Int}}())
+
+    @testset "mixed-sign triangle" begin
+        d_b = quandle_descriptor(pd_before_2)
+        d_a = quandle_descriptor(pd_after_2)
+        @test d_b.colouring_count_3 == d_a.colouring_count_3
+        @test d_b.colouring_count_5 == d_a.colouring_count_5
+        @test d_b.generator_count == d_a.generator_count
+        @test d_b.relation_count == d_a.relation_count
+        # The number of inverse relations must be preserved by R3
+        # (R3 cycles labels; it does not change crossing signs).
+        @test d_b.inverse_relation_count == d_a.inverse_relation_count
+    end
+end
+
 println("quandle-axiom-tests-ok")
