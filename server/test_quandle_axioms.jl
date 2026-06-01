@@ -160,6 +160,12 @@ end
     )
 
     simplified = r1_simplify(pd_with_kink)
+
+    # B8: assert strict reduction (length(t_pd) < length(pd_with_kink), so
+    # a passing r1_simplify must produce length(simplified) < length(pd_with_kink),
+    # not merely == length(t_pd)). The previous == check would silently pass
+    # if r1_simplify did nothing — see PROOF-NARRATIVE.md bug audit B8.
+    @test length(simplified.crossings) < length(pd_with_kink.crossings)
     @test length(simplified.crossings) == length(t_pd.crossings)
 
     # Coloring counts for the diagram before and after R1:
@@ -441,6 +447,110 @@ end
     @test t.homfly_polynomial != f.homfly_polynomial
     @test t.homfly_polynomial != c.homfly_polynomial
     @test f.homfly_polynomial != c.homfly_polynomial
+end
+
+# ---------------------------------------------------------------------------
+# § 13. QD-9 — Union-find traversal-order independence
+#
+# `_wirtinger_arc_to_generator` walks `pd.crossings` and union-finds arc
+# equivalence classes. If the result depended on iteration order, the
+# same knot diagram in two different array layouts would give different
+# `generator_count`, different `quandle_key`, and different
+# `presentation_hash` — silently destabilising the semantic index.
+#
+# Addresses PROOF-NARRATIVE.md QD-9 and assumptions A-QD-9.1, A-QD-9.2.
+# ---------------------------------------------------------------------------
+
+using Random
+
+@testset "QD-9: union-find traversal-order independence" begin
+    for (pd, label) in [
+        (trefoil().pd, "trefoil"),
+        (figure_eight().pd, "figure-eight"),
+        (cinquefoil().pd, "cinquefoil"),
+    ]
+        @testset label begin
+            base_pres = extract_presentation(pd)
+            base_blob = canonical_presentation_blob(base_pres)
+            base_desc = quandle_descriptor(pd)
+
+            rng = MersenneTwister(0xC0FFEE)
+            for trial in 1:8
+                shuffled_crossings = shuffle(rng, copy(pd.crossings))
+                shuffled_pd = PlanarDiagram(shuffled_crossings, pd.components)
+
+                shuffled_pres = extract_presentation(shuffled_pd)
+                @test shuffled_pres.generator_count == base_pres.generator_count
+                @test canonical_presentation_blob(shuffled_pres) == base_blob
+
+                shuffled_desc = quandle_descriptor(shuffled_pd)
+                @test shuffled_desc.presentation_hash == base_desc.presentation_hash
+                @test shuffled_desc.colouring_count_3 == base_desc.colouring_count_3
+                @test shuffled_desc.colouring_count_5 == base_desc.colouring_count_5
+                @test shuffled_desc.quandle_key == base_desc.quandle_key
+            end
+        end
+    end
+end
+
+# ---------------------------------------------------------------------------
+# § 14. QD-2 Path B — R3 invariance hand-corpus
+#
+# Until `r3_simplify` is added upstream to KnotTheory.jl (PROOF-NARRATIVE
+# .md QD-2 Path A, parked at #29), discharge R3 empirically with two
+# hand-constructed PD pairs from the audit Agent's design.
+#
+# Asserted invariants per pair: colouring_count_3, colouring_count_5,
+# generator_count, relation_count, inverse_relation_count (pair 2).
+# NOT asserted: presentation_hash, quandle_key (canonical-form artefacts
+# may differ under arc relabelling — see ASSUMPTIONS.md A-QD-2.2).
+# ---------------------------------------------------------------------------
+
+@testset "QD-2 Path B: R3 triangle-slide preserves quandle descriptor" begin
+    # Pair 1: all-positive triangle, inner arcs {1, 6, 4}.
+    pd_before_1 = PlanarDiagram([
+        Crossing((1, 2, 3, 4), 1),
+        Crossing((1, 5, 6, 2), 1),
+        Crossing((3, 6, 4, 5), 1),
+    ], Vector{Vector{Int}}())
+
+    pd_after_1 = PlanarDiagram([
+        Crossing((3, 2, 6, 4), 1),
+        Crossing((3, 5, 1, 2), 1),
+        Crossing((6, 1, 4, 5), 1),
+    ], Vector{Vector{Int}}())
+
+    @testset "all-positive triangle" begin
+        d_b = quandle_descriptor(pd_before_1)
+        d_a = quandle_descriptor(pd_after_1)
+        @test d_b.colouring_count_3 == d_a.colouring_count_3
+        @test d_b.colouring_count_5 == d_a.colouring_count_5
+        @test d_b.generator_count == d_a.generator_count
+        @test d_b.relation_count == d_a.relation_count
+    end
+
+    # Pair 2: mixed-sign triangle, inner arcs {10, 15, 13}.
+    pd_before_2 = PlanarDiagram([
+        Crossing((10, 11, 12, 13), 1),
+        Crossing((10, 14, 15, 11), -1),
+        Crossing((12, 15, 13, 14), 1),
+    ], Vector{Vector{Int}}())
+
+    pd_after_2 = PlanarDiagram([
+        Crossing((12, 11, 15, 13), 1),
+        Crossing((12, 14, 10, 11), -1),
+        Crossing((15, 10, 13, 14), 1),
+    ], Vector{Vector{Int}}())
+
+    @testset "mixed-sign triangle" begin
+        d_b = quandle_descriptor(pd_before_2)
+        d_a = quandle_descriptor(pd_after_2)
+        @test d_b.colouring_count_3 == d_a.colouring_count_3
+        @test d_b.colouring_count_5 == d_a.colouring_count_5
+        @test d_b.generator_count == d_a.generator_count
+        @test d_b.relation_count == d_a.relation_count
+        @test d_b.inverse_relation_count == d_a.inverse_relation_count
+    end
 end
 
 println("quandle-axiom-tests-ok")
