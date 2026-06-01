@@ -347,4 +347,100 @@ end
     @test f.alexander_polynomial != c.alexander_polynomial
 end
 
+# ---------------------------------------------------------------------------
+# § 12. KT-2 extension — Jones, Conway, HOMFLY populated + non-trivial
+#
+# Same shape as the Alexander tests in §11. The three polynomial fields
+# extend the quandle_descriptor; together with Alexander they form a
+# strictly more discriminating descriptor.
+#
+# Exact-value assertions are deliberately limited to "populated + does
+# not equal the trivial-unknot output". A separate exact-fixture suite
+# is queued (see KT-2 extension follow-up issue) where the test corpus
+# captures the exact strings KnotTheory.jl produces.
+# ---------------------------------------------------------------------------
+
+@testset "KT-2 ext: Jones polynomial is populated + non-trivial" begin
+    for (pd, label) in [
+        (trefoil().pd, "trefoil"),
+        (figure_eight().pd, "figure-eight"),
+        (cinquefoil().pd, "cinquefoil"),
+    ]
+        @testset label begin
+            d = quandle_descriptor(pd)
+            @test !isempty(d.jones_polynomial)
+            @test d.jones_polynomial != "0:0"
+        end
+    end
+end
+
+@testset "KT-2 ext: Conway polynomial is populated + non-trivial" begin
+    for (pd, label) in [
+        (trefoil().pd, "trefoil"),
+        (figure_eight().pd, "figure-eight"),
+        (cinquefoil().pd, "cinquefoil"),
+    ]
+        @testset label begin
+            d = quandle_descriptor(pd)
+            @test !isempty(d.conway_polynomial)
+            @test d.conway_polynomial != "0:0"
+        end
+    end
+end
+
+@testset "KT-2 ext: HOMFLY polynomial is populated within bounds" begin
+    for (pd, label) in [
+        (trefoil().pd, "trefoil"),
+        (figure_eight().pd, "figure-eight"),
+        (cinquefoil().pd, "cinquefoil"),
+    ]
+        @testset label begin
+            d = quandle_descriptor(pd)
+            # All three test knots have < 15 crossings, so HOMFLY computes.
+            @test d.homfly_polynomial != "deferred:too_many_crossings"
+            @test !isempty(d.homfly_polynomial)
+            # HOMFLY is two-variable; format is "a_exp,z_exp:coeff;..."
+            @test occursin(';', d.homfly_polynomial) ||
+                  occursin(',', d.homfly_polynomial)
+        end
+    end
+end
+
+@testset "KT-2 ext: HOMFLY guard returns sentinel above MAX_CROSSINGS" begin
+    # Build a synthetic 16-crossing PD by braid word s1^16. KnotTheory's
+    # MAX_CROSSINGS_FOR_HOMFLY is 15, so this triggers the guard.
+    pd_large = from_braid_word(join(["s1" for _ in 1:16], ".")).pd
+    d_large = quandle_descriptor(pd_large)
+    @test d_large.homfly_polynomial == "deferred:too_many_crossings"
+end
+
+@testset "KT-2 ext: Jones polynomial distinguishes the test knots" begin
+    t = quandle_descriptor(trefoil().pd)
+    f = quandle_descriptor(figure_eight().pd)
+    c = quandle_descriptor(cinquefoil().pd)
+    @test t.jones_polynomial != f.jones_polynomial
+    @test t.jones_polynomial != c.jones_polynomial
+    @test f.jones_polynomial != c.jones_polynomial
+end
+
+@testset "KT-2 ext: Conway polynomial distinguishes the test knots" begin
+    t = quandle_descriptor(trefoil().pd)
+    f = quandle_descriptor(figure_eight().pd)
+    c = quandle_descriptor(cinquefoil().pd)
+    @test t.conway_polynomial != f.conway_polynomial
+    @test t.conway_polynomial != c.conway_polynomial
+    @test f.conway_polynomial != c.conway_polynomial
+end
+
+@testset "KT-2 ext: HOMFLY distinguishes the test knots" begin
+    # HOMFLY-PT subsumes both Alexander and Jones; for these knots it
+    # should distinguish all pairs.
+    t = quandle_descriptor(trefoil().pd)
+    f = quandle_descriptor(figure_eight().pd)
+    c = quandle_descriptor(cinquefoil().pd)
+    @test t.homfly_polynomial != f.homfly_polynomial
+    @test t.homfly_polynomial != c.homfly_polynomial
+    @test f.homfly_polynomial != c.homfly_polynomial
+end
+
 println("quandle-axiom-tests-ok")

@@ -402,6 +402,46 @@ function _serialise_int_poly(poly::Dict{Int,Int})::String
 end
 
 """
+    _serialise_int_poly_2var(poly::Dict{Tuple{Int,Int},Int}) -> String
+
+Serialise a two-variable Laurent polynomial-as-dict (e.g. HOMFLY-PT,
+keyed by `(a_exp, z_exp) -> coeff`) to the canonical form
+`"a_exp,z_exp:coeff;a_exp,z_exp:coeff;..."` (zero coefficients dropped,
+keys sorted lexicographically by `(a_exp, z_exp)`).
+
+Distinct from `_serialise_int_poly` so single-variable and two-variable
+polynomials are unambiguously different strings.
+"""
+function _serialise_int_poly_2var(poly::Dict{Tuple{Int,Int},Int})::String
+    pairs = String[]
+    for key in sort(collect(keys(poly)))
+        coeff = poly[key]
+        coeff == 0 && continue
+        push!(pairs, string(key[1], ",", key[2], ":", coeff))
+    end
+    isempty(pairs) ? "0,0:0" : join(pairs, ";")
+end
+
+# Hard limit from KnotTheory.MAX_CROSSINGS_FOR_HOMFLY = 15. Above this,
+# HOMFLY's skein recursion is too expensive to keep `quandle_descriptor`
+# cheap; we return a sentinel rather than throwing.
+const HOMFLY_MAX_CROSSINGS = 15
+const HOMFLY_DEFERRED_SENTINEL = "deferred:too_many_crossings"
+
+"""
+    _safe_homfly_serialised(pd::KnotTheory.PlanarDiagram) -> String
+
+Compute and serialise the HOMFLY-PT polynomial of `pd`, guarded by the
+`HOMFLY_MAX_CROSSINGS` bound. Returns the sentinel string
+`HOMFLY_DEFERRED_SENTINEL` if `pd` has more than 15 crossings.
+"""
+function _safe_homfly_serialised(pd::KnotTheory.PlanarDiagram)::String
+    length(pd.crossings) > HOMFLY_MAX_CROSSINGS && return HOMFLY_DEFERRED_SENTINEL
+    poly = KnotTheory.homfly_polynomial(pd)
+    _serialise_int_poly_2var(poly)
+end
+
+"""
     quandle_descriptor(pd::KnotTheory.PlanarDiagram) -> NamedTuple
 
 Return canonicalized quandle presentation + simple fingerprints suitable for
@@ -429,6 +469,12 @@ function quandle_descriptor(pd::KnotTheory.PlanarDiagram)
     alexander_poly = KnotTheory.alexander_polynomial(pd)
     alexander_str = _serialise_int_poly(alexander_poly)
 
+    # KT-2 extension: Jones, Conway (both Laurent in one variable),
+    # and HOMFLY-PT (two-variable, guarded at HOMFLY_MAX_CROSSINGS).
+    jones_str = _serialise_int_poly(KnotTheory.jones_polynomial(pd))
+    conway_str = _serialise_int_poly(KnotTheory.conway_polynomial(pd))
+    homfly_str = _safe_homfly_serialised(pd)
+
     key = string(
         canon.generator_count, ":",
         rel_count, ":",
@@ -437,7 +483,10 @@ function quandle_descriptor(pd::KnotTheory.PlanarDiagram)
         color5, ":",
         image_hist_3_str, ":",
         image_hist_5_str, ":",
-        alexander_str,
+        alexander_str, ":",
+        jones_str, ":",
+        conway_str, ":",
+        homfly_str,
     )
 
     (
@@ -453,6 +502,9 @@ function quandle_descriptor(pd::KnotTheory.PlanarDiagram)
         image_histogram_3 = image_hist_3,
         image_histogram_5 = image_hist_5,
         alexander_polynomial = alexander_str,
+        jones_polynomial = jones_str,
+        conway_polynomial = conway_str,
+        homfly_polynomial = homfly_str,
         quandle_key = key,
     )
 end
