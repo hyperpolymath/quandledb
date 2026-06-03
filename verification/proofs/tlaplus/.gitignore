@@ -1,0 +1,3 @@
+# TLC model-checker scratch output (run-stamped state dumps).
+states/
+*.toolbox/
