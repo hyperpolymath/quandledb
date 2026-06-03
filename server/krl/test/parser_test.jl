@@ -30,7 +30,7 @@ Innovation under test:
 using Test
 
 include("../KRL.jl")
-using .KRL: parse_krl, parse_krl_query, parse_any, KRLParseError
+using .KRL   # bring parse_* plus the exported AST node types (KRLProgram, …)
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -220,6 +220,24 @@ stage(q, i) = q.stages[i]
         @test stmt isa KRLAxiomDef
         @test stmt.name == "reflexivity"
         @test isempty(stmt.params)
+    end
+
+    # Regression — bare `=` is accepted surface syntax for let-bindings and
+    # filter equality. Previously the lexer threw on bare `=`, failing every
+    # `let`/filter test that used it (see Lexer.jl `=` handling).
+    @testset "bare = surface syntax (regression)" begin
+        # let binding with bare =
+        lp = parse_krl("let x = 5")
+        @test lp.statements[1] isa KRLLetStmt
+        @test lp.statements[1].name == "x"
+
+        # filter equality with bare = parses the same :eq comparison as ==
+        qbare = one_query("from knots | filter x = 1")
+        qeq   = one_query("from knots | filter x == 1")
+        @test stage(qbare, 1) isa KRLFilterStage
+        @test stage(qbare, 1).pred isa KRLCompare
+        @test stage(qbare, 1).pred.op == :eq
+        @test stage(qeq, 1).pred.op == :eq
     end
 
     # ── Expression precedence ────────────────────────────────────────────────

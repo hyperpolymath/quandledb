@@ -15,7 +15,7 @@ Token kinds (Symbol tags):
               :knot_name — `3_1`, `10_139` (digit `_` digit form)
   Names:      :keyword   — reserved word
               :identifier — user name or invariant name
-  Operators:  :eq          (`==`)
+  Operators:  :eq          (`==` or bare `=` — see `=` handling below)
               :neq         (`!=`)
               :lt          (`<`)
               :lte         (`<=`)
@@ -274,10 +274,17 @@ function tokenise(src::String)::Vector{Token}
         # ── two-character and single-character operators ──────────────────────
 
         if c == '='
+            # KRL accepts bare `=` as surface syntax for let-bindings and
+            # filter equality (grammar.ebnf v0.1.0: `let id = expr`,
+            # `filter ... = value`). The lexer records the glyph only;
+            # equality-as-binding vs equality-as-comparison is resolved by
+            # the parser/typechecker from context, not refused lexically.
             if peek() == '='
-                advance!(); emit(:eq, "==", sl, sc)
+                advance!(); emit(:eq, "==", sl, sc)         # ==  → :eq
+            elseif peek() == '>'
+                advance!(); emit(:fat_arrow, "=>", sl, sc)  # =>  → :fat_arrow
             else
-                throw(KRLLexError("bare `=` is not a KRL operator; did you mean `==`?", sl, sc))
+                emit(:eq, "=", sl, sc)                      # =   → :eq
             end
             continue
         end
@@ -303,12 +310,6 @@ function tokenise(src::String)::Vector{Token}
         if c == '-'
             if peek() == '>'; advance!(); emit(:arrow, "->", sl, sc)
             else; emit(:minus, "-", sl, sc); end
-            continue
-        end
-
-        if c == '='
-            if peek() == '>'; advance!(); emit(:fat_arrow, "=>", sl, sc)
-            else; emit(:eq, "=", sl, sc); end
             continue
         end
 
