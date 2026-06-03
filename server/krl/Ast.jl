@@ -30,7 +30,32 @@ Invariants (checked by the parser, not the AST constructors):
 """
 
 export KRLNode, KRLStatement, KRLSource, KRLPipeStage, KRLReturnItem,
-       KRLExpr, KRLPatternNode, KRLType
+       KRLExpr, KRLPatternNode, KRLType,
+       # enums + values
+       ConfidenceLevel, ConfExact, ConfSufficient, ConfNecessary, ConfHeuristic,
+       SortOrder, SortAsc, SortDesc,
+       EdgeDir, EdgeForward, EdgeBackward, EdgeUndirected,
+       # program + statements
+       KRLProgram, KRLQueryStmt, KRLLetStmt, KRLRuleDef, KRLAxiomDef,
+       # query + sources
+       KRLQuery, KRLSourceKnots, KRLSourceDiagrams, KRLSourceInvariants,
+       KRLSourceNamed, KRLSourceSubquery,
+       # pipeline stages
+       KRLFilterStage, KRLSortStage, KRLTakeStage, KRLSkipStage, KRLReturnStage,
+       KRLGroupByStage, KRLAggregateItem, KRLAggregateStage, KRLFindEquivStage,
+       KRLFindPathStage, KRLMatchStage, KRLLetStage, KRLWithStage,
+       # return items
+       KRLReturnExpr, KRLReturnStar, KRLReturnEquivs, KRLReturnEquivClass,
+       KRLReturnProof,
+       # expressions
+       KRLNullCoalesce, KRLOr, KRLAnd, KRLNot, KRLCompare, KRLBinOp, KRLUnaryNeg,
+       KRLFieldAccess, KRLCall, KRLIndex, KRLVar, KRLKnotName, KRLInt, KRLFloat,
+       KRLString, KRLBool, KRLNone, KRLArray, KRLRecord, KRLGaussCode, KRLTypeAnn,
+       # graph patterns
+       KRLNodePattern, KRLEdgePattern, KRLGraphPattern,
+       # type annotations
+       KRLTyScalar, KRLTyOption, KRLTyList, KRLTySet, KRLTyResultSet, KRLTyEquiv,
+       KRLTyEquivConf, KRLTyMap, KRLTyTuple, KRLTyNamed
 
 # ─── Confidence level ────────────────────────────────────────────────────────
 
