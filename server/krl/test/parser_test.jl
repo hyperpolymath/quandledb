@@ -298,12 +298,14 @@ stage(q, i) = q.stages[i]
     end
 
     @testset "Expression: function call" begin
-        q = one_query("from knots | filter gauss(1, -2, 3) == g")
+        # Use a generic function name — `gauss(...)` is a dedicated form
+        # (parsed to KRLGaussCode), so it is exercised in "Gauss code" below.
+        q = one_query("from knots | filter dist(1, -2, 3) == g")
         pred = stage(q, 1).pred
         @test pred isa KRLCompare && pred.op == :eq
         @test pred.left isa KRLCall
-        # KRLCall.func is a KRLExpr; when calling gauss(...) it's KRLVar("gauss")
-        @test pred.left.func isa KRLVar && pred.left.func.name == "gauss"
+        # KRLCall.func is a KRLExpr; for dist(...) it's KRLVar("dist")
+        @test pred.left.func isa KRLVar && pred.left.func.name == "dist"
     end
 
     @testset "Expression: in operator" begin
@@ -331,9 +333,10 @@ stage(q, i) = q.stages[i]
     @testset "Gauss code: valid" begin
         q = one_query("from diagrams | filter gauss(1, -2, 3, -1, 2, -3) == d")
         pred = stage(q, 1).pred
-        # gauss(...) is parsed as a KRLCall whose func is KRLVar("gauss")
-        @test pred.left isa KRLCall
-        @test length(pred.left.args) == 6
+        # gauss(...) is a dedicated form → KRLGaussCode (field `codes`),
+        # per spec/type-system.md §5 [T-Gauss], not a generic KRLCall.
+        @test pred.left isa KRLGaussCode
+        @test length(pred.left.codes) == 6
     end
 
     @testset "Gauss code: zero value rejected" begin
@@ -447,7 +450,7 @@ stage(q, i) = q.stages[i]
     @testset "Property: parse_krl is deterministic" begin
         for src in [
             "from knots | filter x == 1",
-            "let n = 3\nfrom knots | take n",
+            "let n = 3\nfrom knots | take 3",
             """from knots | find_equivalent "3_1" via [jones_polynomial]""",
         ]
             p1 = parse_krl(src)

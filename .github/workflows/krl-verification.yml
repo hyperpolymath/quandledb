@@ -80,7 +80,9 @@ jobs:
           found=0
           for f in $(find verification/proofs/agda -name '*.agda' 2>/dev/null); do
             echo "── agda --safe $f"
-            LC_ALL=C.UTF-8 agda --safe "$f"
+            # Run from the file's own directory so the top-level module name
+            # (e.g. `DihedralQuandle`) matches the file name as Agda requires.
+            ( cd "$(dirname "$f")" && LC_ALL=C.UTF-8 agda --safe "$(basename "$f")" )
             found=1
           done
           if [ "$found" = "0" ]; then echo "No Agda proofs found"; exit 1; fi
