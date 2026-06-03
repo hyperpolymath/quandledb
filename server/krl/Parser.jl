@@ -488,9 +488,13 @@ end
 
 function _parse_find_path_stage(ps::ParserState)::KRLFindPathStage
     t     = _expect!(ps, :keyword, "find_path")
-    src_e = _parse_expr(ps)
+    # `~>` is the find_path separator AND a comparison operator (_CMP_KINDS),
+    # so the operands must be parsed *below* the comparison level — otherwise
+    # `_parse_expr` greedily absorbs `src ~> tgt` into a single KRLCompare and
+    # the `~>`/`via` separators are lost. Parse operands at additive level.
+    src_e = _parse_additive(ps)
     _expect!(ps, :tilde_arrow)   # ~>
-    tgt   = _parse_expr(ps)
+    tgt   = _parse_additive(ps)
     _expect!(ps, :keyword, "via")
     method_tok = _peek(ps)
     (method_tok.kind == :keyword || method_tok.kind == :identifier) ||
