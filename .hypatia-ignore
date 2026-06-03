@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: MPL-2.0
+#
+# .hypatia-ignore — per-rule Hypatia scanner exemptions for quandledb.
+#
+# Format (one entry per line; `#` for comments):
+#   <rule_module>/<rule_type>:<path-fragment>
+# The path fragment is substring-matched against each finding's
+# repo-relative path.
+#
+# Each entry below is a verified FALSE POSITIVE. Real findings are not
+# silenced here.
+
+# ── cicd_rules/banned_language_file on the ReScript frontend — FALSE POSITIVE ──
+# The frontend is ReScript + React (.claude/CLAUDE.md: "Frontend: ReScript +
+# React SPA (frontend/src/)"). ReScript is an ALLOWED language under the
+# Hyperpolymath standard — it is the sanctioned TypeScript replacement and is
+# never on the banned list. The rule's language detector does not recognise
+# `.res` as allowed and flags it; this is intentional, supported frontend code.
+cicd_rules/banned_language_file:frontend/src/
