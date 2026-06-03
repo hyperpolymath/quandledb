@@ -72,6 +72,10 @@ jobs:
           mkdir -p "$HOME/.agda"
           echo /usr/share/agda-stdlib/standard-library.agda-lib > "$HOME/.agda/libraries"
           echo standard-library > "$HOME/.agda/defaults"
+          # Agda writes interface (.agdai) files into the library's _build dir;
+          # the apt stdlib is root-owned, so make it writable for the (non-root)
+          # runner user that invokes `agda`.
+          sudo chmod -R a+rwX /usr/share/agda-stdlib
 
       - name: Check Agda proofs under --safe
         run: |
