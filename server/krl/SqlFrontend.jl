@@ -59,10 +59,12 @@ const _SQL_UPPER_KWS = Set([
     "JOIN", "INNER", "LEFT", "RIGHT", "ON", "UNION", "ALL",
     "INSERT", "UPDATE", "DELETE", "CREATE", "ALTER",
     "GRANT", "REVOKE",
+    "KNOTS", "DIAGRAMS", "INVARIANTS",   # built-in source names → case-insensitive
 ])
 
 const _SQL_UNSUPPORTED_KWS = Set([
     "null",       # KRL uses none / Option[τ]
+    "is",         # `IS NULL` — KRL has no NULL
     "insert", "update", "delete",  # QuandleDB is read-only
     "create", "alter",             # schema is fixed
     "grant", "revoke",             # no access control yet
@@ -134,6 +136,9 @@ function _parse_sql_query(ps::ParserState)::KRLQuery
         wtok = _advance!(ps)
         stages = _check_sql_unsupported_expr(ps, stages)
         pred   = _parse_expr(ps)
+        # Trailing unsupported constructs the KRL expr grammar doesn't consume,
+        # e.g. `x IS NULL` (KRL has no NULL).
+        _check_sql_unsupported_expr(ps, stages)
         push!(stages, KRLFilterStage(pred, wtok.line, wtok.col))
     end
 
@@ -245,6 +250,7 @@ function _check_sql_unsupported_expr(ps::ParserState, stages::Vector)
     if t.kind == :keyword && t.value in _SQL_UNSUPPORTED_KWS
         alt = Dict(
             "null"   => "`none` or `Option[τ]`",
+            "is"     => "`none` — KRL has no NULL (Option[τ])",
             "insert" => "(QuandleDB is read-only; use Skein.jl REPL for mutations)",
             "update" => "(QuandleDB is read-only; use Skein.jl REPL for mutations)",
             "delete" => "(QuandleDB is read-only; use Skein.jl REPL for mutations)",
