@@ -5,14 +5,15 @@
 QuandleDB is a knot-theory database application wrapping Skein.jl.
 
 - **Server**: Julia HTTP server (`server/serve.jl`) using HTTP.jl + JSON3.jl
-- **Frontend**: ReScript + React SPA (`frontend/src/`)
+- **Frontend**: AffineScript TEA interface (`frontend/src/ui/tea/quandle_gui.affine`)
 - **Engine**: Skein.jl (path dependency at `../../Skein.jl`)
 
 ## Build Commands
 
 ```bash
-# Frontend
-cd frontend && deno task build
+# Frontend (AffineScript — affinescript#56 DOM/fetch bindings pending)
+cd frontend && deno task check   # affinescript check
+cd frontend && deno task build   # affinescript build
 
 # Server
 cd server && julia --project=. -e 'using Pkg; Pkg.instantiate()'
@@ -28,9 +29,9 @@ julia --project=server server/serve.jl data/knots.db --port 8080 --static public
 ## Key Conventions
 
 - Server is read-only (database mutations via Skein.jl REPL)
-- Frontend uses standard React hooks (useReducer, useEffect), not full TEA
+- Frontend is an AffineScript TEA program (Model/Msg/init/update/view/subs), mirroring nextgen-databases/nqc/src/ui/tea/nqc_gui.affine
 - JSON field names use snake_case (matching Skein.jl schema)
-- ReScript files use SPDX headers
+- AffineScript files use SPDX headers (`SPDX-License-Identifier: MPL-2.0`)
 - SCM files in `.machine_readable/` ONLY
 
 ## Machine-Readable Artefacts
