@@ -1,0 +1,367 @@
+// SPDX-License-Identifier: MPL-2.0
+// Copyright (c) 2026 Jonathan D.A. Jewell (hyperpolymath) <j.d.a.jewell@open.ac.uk>
+//
+// quandle_gui.affine — QuandleDB frontend, AffineScript TEA interface.
+//
+// FULL REPLACEMENT for the retired ReScript + React SPA that previously
+// lived at quandledb/frontend/src/*.res. ReScript and TypeScript are both
+// banned estate-wide under the Hyperpolymath Standard (see
+// nextgen-languages/.claude/CLAUDE.md, 2026-06-04); AffineScript is the
+// mandated primary application language.
+//
+// Structure mirrors the canonical estate TEA file
+// nextgen-databases/nqc/src/ui/tea/nqc_gui.affine (the NextGen Query
+// Client hub, which already lists QuandleDB): a pure
+// Model / Msg / init / update / view / subs core.
+//
+// Effect-surface discipline follows krl/examples/SafeDOMExample.affine:
+// the HTTP, JSON-decode and DOM-mount bindings are declared as
+// `extern fn ... -{IO}-> ...` against the affinescript-ecosystem
+// fetch + DOM mounter (affinescript#56) and the typed-wasm JSON surface.
+// Those bindings are not yet in the published stdlib, so this module is
+// PARSE-checked but not TYPE-checked end-to-end until #56 lands; an
+// `affinescript check` will report `Resolve.UndefinedModule` for the
+// extern host surface, which is expected (identical posture to
+// SafeDOMExample.affine).
+
+module QuandleGui;
+
+use prelude::{Option, Some, None, Result, Ok, Err};
+
+// ── Extern host surface (pending affinescript#56 + typed-wasm JSON) ──────────
+// Opaque host types; real shapes land with the binding survey.
+extern type JsonValue;
+extern type HttpClient;
+extern type Element;
+
+// Single-mount status, lifted from SafeDOMExample's MountStatus shape.
+enum MountStatus {
+  Mounted(Element),
+  MountPointNotFound(String),
+  InvalidSelector(String),
+  InvalidHTML(String)
+}
+
+// ── Domain types (ported 1:1 from the retired Types.res) ─────────────────────
+
+// Asynchronous remote-data lifecycle (was Types.remoteData<'a, 'e>).
+enum RemoteData<A, E> {
+  NotAsked,
+  Loading,
+  Success(A),
+  Failure(E)
+}
+
+// AffineScript's confirmed surface has no Dict type, so the ReScript
+// `Js.Dict.t<_>` fields below are modelled as association lists of pairs.
+struct StrEntry { key: String, value: String }
+struct IntEntry { key: String, value: Int }
+
+struct Knot {
+  id: String,
+  name: String,
+  gauss_code: [Int],
+  crossing_number: Int,
+  writhe: Int,
+  genus: Option<Int>,
+  seifert_circle_count: Option<Int>,
+  determinant: Option<Int>,
+  signature: Option<Int>,
+  alexander_polynomial: Option<String>,
+  alexander_display: Option<String>,
+  jones_polynomial: Option<String>,
+  jones_display: Option<String>,
+  homfly_polynomial: Option<String>,
+  metadata: [StrEntry],
+  created_at: String,
+  updated_at: String
+}
+
+struct KnotListResponse {
+  knots: [Knot],
+  count: Int,
+  limit: Int,
+  offset: Int
+}
+
+struct Statistics {
+  total_knots: Int,
+  min_crossings: Option<Int>,
+  max_crossings: Option<Int>,
+  crossing_distribution: [IntEntry],
+  genus_distribution: [IntEntry],
+  schema_version: Int
+}
+
+struct Filters {
+  crossing_number: Option<Int>,
+  genus: Option<Int>,
+  name_search: String
+}
+
+struct StageTrace {
+  stage: String,
+  rows_in: Int,
+  rows_out: Int,
+  elapsed_ms: Float,
+  note: String
+}
+
+struct QueryResponse {
+  rows: [JsonValue],
+  count: Int,
+  parse_time_ms: Float,
+  eval_time_ms: Float,
+  total_ms: Float,
+  pushdown_used: Bool,
+  parse_source: String,
+  warnings: [String],
+  trace: [StageTrace]
+}
+
+struct QueryError {
+  error_kind: String,
+  message: String,
+  line: Option<Int>,
+  col: Option<Int>
+}
+
+fn empty_filters() -> Filters {
+  Filters #{ crossing_number: None, genus: None, name_search: "" }
+}
+
+// ── Route (ported from Route.res) ─────────────────────────────────────────────
+
+enum Route {
+  Dashboard,
+  KnotList,
+  KnotDetail(String),
+  Query,
+  NotFound
+}
+
+// Pure render of a route to its URL path. The inverse parse and the
+// browser-history push are host/IO concerns (see the extern surface and
+// `UrlChanged`), exactly as nqc delegates URL handling to cadre-router.
+fn route_to_path(route: Route) -> String {
+  match route {
+    Dashboard => "/",
+    KnotList => "/knots",
+    KnotDetail(name) => "/knots/" ++ name,
+    Query => "/query",
+    NotFound => "/404"
+  }
+}
+
+// ── Model ─────────────────────────────────────────────────────────────────────
+
+struct Model {
+  route: Route,
+  stats: RemoteData<Statistics, String>,
+  knots: RemoteData<KnotListResponse, String>,
+  knot_detail: RemoteData<Knot, String>,
+  filters: Filters,
+  query_text: String,
+  query_result: RemoteData<QueryResponse, QueryError>
+}
+
+// ── Msg ──────────────────────────────────────────────────────────────────────
+
+enum Msg {
+  NavigateTo(Route),
+  UrlChanged(Route),
+  GotStatistics(Result<Statistics, String>),
+  GotKnots(Result<KnotListResponse, String>),
+  GotKnotDetail(Result<Knot, String>),
+  SetFilters(Filters),
+  UpdateQueryText(String),
+  SubmitQuery,
+  GotQueryResult(Result<QueryResponse, QueryError>)
+}
+
+// ── TEA: init ──────────────────────────────────────────────────────────────────
+
+fn quandle_init(initial_route: Route) -> Model {
+  Model #{
+    route: initial_route,
+    stats: RemoteData::NotAsked,
+    knots: RemoteData::NotAsked,
+    knot_detail: RemoteData::NotAsked,
+    filters: empty_filters(),
+    query_text: "",
+    query_result: RemoteData::NotAsked
+  }
+}
+
+// ── TEA: update ────────────────────────────────────────────────────────────────
+//
+// Pure state transition (was the React.useReducer body in App.res). The
+// model and message are consumed affinely (@linear) and a fresh Model is
+// returned field-by-field, matching the nqc_gui.affine discipline (the
+// confirmed surface has no functional-update spread).
+//
+// Where the ReScript used React.useEffect to launch fetches on route /
+// filter change, those are Commands: the host TEA runtime inspects the
+// returned Route / Filters and issues the corresponding extern http_get /
+// http_post (below), dispatching GotStatistics / GotKnots / GotKnotDetail /
+// GotQueryResult back into this function. The data edges are noted inline
+// (cf. nqc_gui.affine's "this would trigger a Command").
+
+fn quandle_update(@linear msg: Msg, @linear model: Model) -> Model {
+  match model {
+    {
+      route: r,
+      stats: st,
+      knots: kn,
+      knot_detail: kd,
+      filters: fl,
+      query_text: qt,
+      query_result: qr
+    } => {
+      match msg {
+        // Navigation: host pushes history (Command); route changes now.
+        NavigateTo(new_route) => Model #{
+          route: new_route, stats: st, knots: kn, knot_detail: kd,
+          filters: fl, query_text: qt, query_result: qr
+        },
+
+        // Browser back/forward delivered a new route (host parsed the URL).
+        UrlChanged(new_route) => Model #{
+          route: new_route, stats: st, knots: kn, knot_detail: kd,
+          filters: fl, query_text: qt, query_result: qr
+        },
+
+        GotStatistics(res) => match res {
+          Ok(s) => Model #{
+            route: r, stats: RemoteData::Success(s), knots: kn,
+            knot_detail: kd, filters: fl, query_text: qt, query_result: qr
+          },
+          Err(e) => Model #{
+            route: r, stats: RemoteData::Failure(e), knots: kn,
+            knot_detail: kd, filters: fl, query_text: qt, query_result: qr
+          }
+        },
+
+        GotKnots(res) => match res {
+          Ok(k) => Model #{
+            route: r, stats: st, knots: RemoteData::Success(k),
+            knot_detail: kd, filters: fl, query_text: qt, query_result: qr
+          },
+          Err(e) => Model #{
+            route: r, stats: st, knots: RemoteData::Failure(e),
+            knot_detail: kd, filters: fl, query_text: qt, query_result: qr
+          }
+        },
+
+        GotKnotDetail(res) => match res {
+          Ok(k) => Model #{
+            route: r, stats: st, knots: kn,
+            knot_detail: RemoteData::Success(k), filters: fl,
+            query_text: qt, query_result: qr
+          },
+          Err(e) => Model #{
+            route: r, stats: st, knots: kn,
+            knot_detail: RemoteData::Failure(e), filters: fl,
+            query_text: qt, query_result: qr
+          }
+        },
+
+        // New filters -> knots go Loading; host refetches (Command).
+        SetFilters(new_filters) => Model #{
+          route: r, stats: st, knots: RemoteData::Loading,
+          knot_detail: kd, filters: new_filters, query_text: qt,
+          query_result: qr
+        },
+
+        UpdateQueryText(new_text) => Model #{
+          route: r, stats: st, knots: kn, knot_detail: kd,
+          filters: fl, query_text: new_text, query_result: qr
+        },
+
+        // Submit -> result goes Loading; host posts the query (Command).
+        SubmitQuery => Model #{
+          route: r, stats: st, knots: kn, knot_detail: kd,
+          filters: fl, query_text: qt, query_result: RemoteData::Loading
+        },
+
+        GotQueryResult(res) => match res {
+          Ok(q) => Model #{
+            route: r, stats: st, knots: kn, knot_detail: kd,
+            filters: fl, query_text: qt, query_result: RemoteData::Success(q)
+          },
+          Err(e) => Model #{
+            route: r, stats: st, knots: kn, knot_detail: kd,
+            filters: fl, query_text: qt, query_result: RemoteData::Failure(e)
+          }
+        }
+      }
+    }
+  }
+}
+
+// ── TEA: view ──────────────────────────────────────────────────────────────────
+//
+// Abstract view returning a String summary per route (identical posture to
+// nqc_gui.affine's nqc_view). Real DOM rendering is performed by the host
+// via the extern mount surface once affinescript#56 lands the fetch + DOM
+// bindings; the structured element tree is out of scope for the pure core.
+
+fn quandle_view(model: Model) -> String {
+  match model.route {
+    Dashboard => "QuandleDB / Dashboard — statistics + distributions",
+    KnotList => "QuandleDB / Knots — filterable knot list",
+    KnotDetail(name) => "QuandleDB / Knot — " ++ name,
+    Query => "QuandleDB / Query — KRL/SQL editor: " ++ model.query_text,
+    NotFound => "QuandleDB / 404 — route not found"
+  }
+}
+
+// ── TEA: subs ──────────────────────────────────────────────────────────────────
+// The app subscribes to browser history (popstate) -> UrlChanged. The host
+// wires the actual listener; this names the subscription.
+fn quandle_subs(model: Model) -> String {
+  "popstate"
+}
+
+// ── Extern effect surface (host commands; pending affinescript#56) ───────────
+//
+// HTTP (was Api.res's typed Fetch bindings + fetchJson / fetchKnots / ...).
+extern fn http_get(
+  client: ref HttpClient,
+  url: ref String,
+  on_done: fn(Result<JsonValue, String>) -> (),
+) -{IO}-> ();
+
+extern fn http_post(
+  client: ref HttpClient,
+  url: ref String,
+  body: ref String,
+  on_done: fn(Result<JsonValue, String>) -> (),
+) -{IO}-> ();
+
+// JSON decoders (was Decoders.res). Host-side, these validate the
+// snake_case server schema and reconstruct the typed records above.
+extern fn decode_statistics(j: ref JsonValue) -> Result<Statistics, String>;
+extern fn decode_knot(j: ref JsonValue) -> Result<Knot, String>;
+extern fn decode_knot_list(j: ref JsonValue) -> Result<KnotListResponse, String>;
+extern fn decode_query_response(j: ref JsonValue) -> Result<QueryResponse, String>;
+extern fn decode_query_error(j: ref JsonValue) -> QueryError;
+
+// DOM mount (was Main.res's ReactDOM.Client.createRoot + render), using the
+// SafeDOMExample mounter shape.
+extern fn mount(selector: ref String, html: ref String) -{IO}-> MountStatus;
+
+// ── Entry point ────────────────────────────────────────────────────────────────
+//
+// Mounts the app at #root with the initial render and hands the pure
+// init / update / view / subs to the host TEA runtime (the
+// affinescript-ecosystem driver). Mirrors SafeDOMExample.affine's
+// mount_app; the runtime wiring lands with affinescript#56.
+pub fn main() -{IO}-> () {
+  match mount("#root", quandle_view(quandle_init(Route::Dashboard))) {
+    Mounted(_el) => Console::log("QuandleDB mounted"),
+    MountPointNotFound(s) => Console::error("QuandleDB: mount point not found: " ++ s),
+    InvalidSelector(s) => Console::error("QuandleDB: invalid selector: " ++ s),
+    InvalidHTML(s) => Console::error("QuandleDB: invalid HTML: " ++ s)
+  }
+}
