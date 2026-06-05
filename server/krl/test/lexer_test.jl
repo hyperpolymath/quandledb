@@ -120,7 +120,7 @@ include("../Lexer.jl")
 
     @testset "Operators" begin
         pairs = [
-            ("==", :eq), ("!=", :neq), ("<", :lt), ("<=", :lte),
+            ("==", :eq), ("=", :eq), ("!=", :neq), ("<", :lt), ("<=", :lte),
             (">", :gt), (">=", :gte),
             ("+", :plus), ("-", :minus), ("*", :star), ("/", :slash), ("%", :percent),
             ("|", :pipe), ("->", :arrow), ("=>", :fat_arrow),
@@ -152,8 +152,6 @@ include("../Lexer.jl")
     end
 
     @testset "Error cases" begin
-        # Bare = (not ==)
-        @test_throws KRLLexError tokenise("=")
         # Bare ~ (not ~> or ~=)
         @test_throws KRLLexError tokenise("~")
         # Bare ? (not ??)

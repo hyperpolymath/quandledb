@@ -1,0 +1,93 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2026 Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+#
+# KRL Verification — runs the self-contained KRL lexer/parser/SQL test suite
+# (pure Julia: the `KRL` module pulls in no external packages, so it loads on
+# base Julia with no Pkg.instantiate) AND machine-checks the Agda proofs under
+# verification/proofs/agda.
+#
+# Why this exists: `.gitlab-ci.yml` only defines jobs gated on `Cargo.toml` /
+# `mix.exs`, neither of which this (Julia + ReScript) repo has — so the Julia
+# test suite was never executed by any CI gate. This workflow closes that gap
+# so lexer/parser regressions are caught in future.
+
+name: KRL Verification
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+# Estate guardrail: cancel superseded runs (read-only checks, safe to cancel).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  krl-tests:
+    name: KRL lexer / parser / SQL tests (Julia)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+
+      - name: Install Julia 1.10
+        run: |
+          set -euo pipefail
+          curl -fsSL https://install.julialang.org -o "$RUNNER_TEMP/juliaup-init.sh"
+          sh "$RUNNER_TEMP/juliaup-init.sh" --yes --default-channel 1.10
+          echo "$HOME/.juliaup/bin" >> "$GITHUB_PATH"
+
+      - name: Julia version
+        run: julia --version
+
+      - name: Run KRL test suite
+        run: |
+          set -e
+          # Each test file includes ../KRL.jl (or ../Lexer.jl) relative to its
+          # own location; a top-level @testset throws on failure → non-zero exit.
+          julia --color=yes server/krl/test/lexer_test.jl
+          julia --color=yes server/krl/test/parser_test.jl
+          julia --color=yes server/krl/test/sql_test.jl
+
+  agda-proofs:
+    name: Agda proofs (--safe)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+
+      - name: Install Agda + standard library
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends agda agda-stdlib
+          # Ubuntu ships the stdlib source but omits its .agda-lib registration.
+          printf 'name: standard-library\ninclude: .\n' \
+            | sudo tee /usr/share/agda-stdlib/standard-library.agda-lib >/dev/null
+          mkdir -p "$HOME/.agda"
+          echo /usr/share/agda-stdlib/standard-library.agda-lib > "$HOME/.agda/libraries"
+          echo standard-library > "$HOME/.agda/defaults"
+          # Agda writes interface (.agdai) files into the library's _build dir;
+          # the apt stdlib is root-owned, so make it writable for the (non-root)
+          # runner user that invokes `agda`.
+          sudo chmod -R a+rwX /usr/share/agda-stdlib
+
+      - name: Check Agda proofs under --safe
+        run: |
+          set -e
+          shopt -s nullglob
+          found=0
+          for f in $(find verification/proofs/agda -name '*.agda' 2>/dev/null); do
+            echo "── agda --safe $f"
+            # Run from the file's own directory so the top-level module name
+            # (e.g. `DihedralQuandle`) matches the file name as Agda requires.
+            ( cd "$(dirname "$f")" && LC_ALL=C.UTF-8 agda --safe "$(basename "$f")" )
+            found=1
+          done
+          if [ "$found" = "0" ]; then echo "No Agda proofs found"; exit 1; fi
+          echo "PASS: all Agda proofs check under --safe"

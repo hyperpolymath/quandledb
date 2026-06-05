@@ -28,7 +28,7 @@ Coverage:
 using Test
 
 include("../KRL.jl")
-using .KRL: parse_sql, parse_any, KRLParseError
+using .KRL   # bring parse_* plus the exported AST node types
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
