@@ -1,13 +1,13 @@
 # Clone the repository
-git clone https://github.com/hyperpolymath/nextgen-databases.git
-cd nextgen-databases
+git clone https://github.com/hyperpolymath/quandledb.git
+cd quandledb
 
 # Using Nix (recommended for reproducibility)
 nix develop
 
 # Or using toolbox/distrobox
-toolbox create nextgen-databases-dev
-toolbox enter nextgen-databases-dev
+toolbox create quandledb-dev
+toolbox enter quandledb-dev
 # Install dependencies manually
 
 # Verify setup
@@ -17,7 +17,7 @@ just test    # Run test suite
 
 ### Repository Structure
 ```
-nextgen-databases/
+quandledb/
 ├── src/                 # Source code (Perimeter 1-2)
 ├── lib/                 # Library code (Perimeter 1-2)
 ├── extensions/          # Extensions (Perimeter 2)
@@ -86,10 +86,10 @@ Use the [feature request template](.github/ISSUE_TEMPLATE/feature_request.md) an
 
 Look for issues labelled:
 
-- [`good first issue`](https://github.com/hyperpolymath/nextgen-databases/labels/good%20first%20issue) — Simple Perimeter 3 tasks
-- [`help wanted`](https://github.com/hyperpolymath/nextgen-databases/labels/help%20wanted) — Community help needed
-- [`documentation`](https://github.com/hyperpolymath/nextgen-databases/labels/documentation) — Docs improvements
-- [`perimeter-3`](https://github.com/hyperpolymath/nextgen-databases/labels/perimeter-3) — Community sandbox scope
+- [`good first issue`](https://github.com/hyperpolymath/quandledb/labels/good%20first%20issue) — Simple Perimeter 3 tasks
+- [`help wanted`](https://github.com/hyperpolymath/quandledb/labels/help%20wanted) — Community help needed
+- [`documentation`](https://github.com/hyperpolymath/quandledb/labels/documentation) — Docs improvements
+- [`perimeter-3`](https://github.com/hyperpolymath/quandledb/labels/perimeter-3) — Community sandbox scope
 
 ---
 
