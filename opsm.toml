@@ -10,8 +10,8 @@ description = "QuandleDB — algebraic database using quandle structures for sem
 license = "MPL-2.0"
 authors = ["Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>"]
 keywords = ["quandledb", "hyperpolymath", "nextgen-databases", "database"]
-homepage = "https://github.com/hyperpolymath/nextgen-databases"
-repository = "https://github.com/hyperpolymath/nextgen-databases"
+homepage = "https://github.com/hyperpolymath/quandledb"
+repository = "https://github.com/hyperpolymath/quandledb"
 forth = "quandledb"
 
 [opsm]
