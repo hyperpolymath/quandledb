@@ -7,14 +7,27 @@ version = "0.1.0"
 last-updated = "2026-02-13"
 
 [project]
-name = "Quandledb"
-purpose = "Knot-theory database application"
-role = ""
+name = "QuandleDB"
+purpose = "Knot-theory database application — the invariant/equivalence + semantic-identity layer of the KRL stack. Extracts quandle presentations from TangleIR, computes canonical fingerprints and colouring invariants, and is the canonical persistence + invariant/equivalence face (where presentations, invariants, fingerprints, equivalence classes, witnesses, and results live), presented as a read-only HTTP API + AffineScript UI over the Skein.jl engine."
+role = "Database application / invariant-equivalence + semantic-identity layer of the KRL stack; the persistence + invariant/equivalence face that wraps the Skein.jl engine. Hosts the server-side KRL parser (server/krl/)."
 
 [position-in-ecosystem]
-category = ""
+category = "knot database application (KRL stack)"
+
+# KRL = Knot Resolution Language: a resolution DSL for Construct/Transform/
+# Resolve/Retrieve over knot/tangle identity — NOT merely a query language. The
+# four KRL operations run against the QuandleDB + Skein.jl substrate; no single
+# op maps 1:1 to a component (QuandleDB is not 'the Resolve leg').
+[krl-stack]
+layer-surface = "KRL surface syntax (hyperpolymath/krl); server-side parser here in server/krl/"
+layer-interchange = "TangleIR — canonical interchange object (KRLAdapter.jl, consumed by hyperpolymath/tangle)"
+layer-core = "Tangle core — proven type-safe small-step semantics (hyperpolymath/tangle, Lean)"
+layer-substrate = "QuandleDB (this repo) = invariant/equivalence + semantic-identity face (quandle fingerprints, equivalence/identity), wrapping Skein.jl = computational/backend engine + embedded store"
 
 [related-projects]
 projects = [
-  # No related projects recorded
+  "hyperpolymath/krl — KRL surface language (resolution DSL) the stack serves",
+  "hyperpolymath/Skein.jl — computational/backend engine + embedded store this app wraps",
+  "hyperpolymath/tangle — TangleIR + Tangle core (compute substrate)",
+  "hyperpolymath/KnotTheory.jl — invariant engine (weakdep via Skein)",
 ]

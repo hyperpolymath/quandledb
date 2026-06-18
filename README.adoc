@@ -16,7 +16,16 @@ link:https://github.com/hyperpolymath/krl/blob/main/docs/krl_map.html[→ KRL ar
 
 == What it is
 
-QuandleDB is the semantic identity layer of the KRL stack.
+QuandleDB is the *invariant/equivalence + semantic-identity layer* of the KRL
+stack — and its canonical *persistence + invariant/equivalence face*: where
+presentations, invariants, fingerprints, equivalence classes, witnesses, and
+results live. It is a database *application* (read-only HTTP API + AffineScript
+UI) over the https://github.com/hyperpolymath/Skein.jl[Skein.jl] engine.
+
+KRL (Knot Resolution Language) is the stack's resolution DSL — *not merely* a
+query language; QuandleDB hosts the server-side KRL parser (`server/krl/`). The
+four KRL operations (construct / transform / resolve / retrieve) run against the
+QuandleDB + Skein substrate; no single op maps 1:1 to a component.
 
 A _quandle_ is an algebraic structure tailor-made for knot theory:
 it satisfies exactly the axioms that correspond to Reidemeister moves,
