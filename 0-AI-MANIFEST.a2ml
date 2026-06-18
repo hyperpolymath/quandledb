@@ -77,9 +77,9 @@ quandledb/
 
 ## KEY RELATIONSHIPS
 
-- **Skein.jl** is the database engine (Julia library)
-- **QuandleDB** is the application layer (HTTP API + web UI)
-- **KRL** (planned) will be the resolution language
+- **Skein.jl** is the computational/backend engine of the KRL stack (Julia library + embedded SQLite store)
+- **QuandleDB** is the database application — the invariant/equivalence + semantic-identity face (quandle fingerprints, equivalence/identity; read-only HTTP API + AffineScript UI) wrapping Skein.jl; hosts the server-side KRL parser (`server/krl/`)
+- **KRL** (Knot Resolution Language) is the stack's resolution DSL — *not merely* a query language; the four ops (construct/transform/resolve/retrieve) run against the QuandleDB+Skein substrate
 
 ## SESSION STARTUP CHECKLIST
 

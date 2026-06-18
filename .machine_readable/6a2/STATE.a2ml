@@ -11,7 +11,7 @@ session = "converted from scheme — 2026-04-11"
 
 [project-context]
 name = "Quandledb"
-purpose = """HTTP API server wrapping Skein.jl"""
+purpose = """Knot-theory database application — the invariant/equivalence + semantic-identity face of the KRL stack (quandle fingerprints, equivalence/identity), as a read-only HTTP API + AffineScript UI wrapping the Skein.jl engine. Hosts the server-side KRL parser (server/krl/)."""
 completion-percentage = 40
 
 [position]

@@ -2,7 +2,14 @@
 
 ## Project Overview
 
-QuandleDB is a knot-theory database application wrapping Skein.jl.
+QuandleDB is a knot-theory database application — the invariant/equivalence +
+semantic-identity layer of the KRL stack, wrapping the Skein.jl engine. It extracts
+quandle presentations from TangleIR, computes fingerprints/colouring invariants, and
+is the canonical persistence + invariant/equivalence face (where presentations,
+invariants, fingerprints, equivalence classes, witnesses, and results live). KRL =
+Knot Resolution Language, a resolution DSL — *not merely* a query language; QuandleDB
+hosts the server-side KRL parser (`server/krl/`). The four KRL ops run against the
+QuandleDB+Skein substrate; no single op maps 1:1 to a component.
 
 - **Server**: Julia HTTP server (`server/serve.jl`) using HTTP.jl + JSON3.jl
 - **Frontend**: AffineScript TEA interface (`frontend/src/ui/tea/quandle_gui.affine`)
@@ -36,7 +43,7 @@ julia --project=server server/serve.jl data/knots.db --port 8080 --static public
 
 ## Machine-Readable Artefacts
 
-The following files in `.machine_readable/` contain structured project metadata:
-- `STATE.scm` - Current project state and progress
-- `META.scm` - Architecture decisions
-- `ECOSYSTEM.scm` - Relationship to Skein.jl and ecosystem
+The following files in `.machine_readable/6a2/` contain structured project metadata:
+- `STATE.a2ml` - Current project state and progress
+- `META.a2ml` - Architecture decisions
+- `ECOSYSTEM.a2ml` - Relationship to Skein.jl and the KRL stack
