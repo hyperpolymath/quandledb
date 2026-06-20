@@ -1,0 +1,82 @@
+// SPDX-License-Identifier: MPL-2.0
+// SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+= QuandleDB — Normative Scope (Must / Intend / Wish)
+:toc: preamble
+:revdate: 2026-06-19
+
+[abstract]
+Per-repo normative-scope record for QuandleDB (the persistence + invariant/
+equivalence face of the KRL stack). This file holds the *canonical* copy of the
+QuandleDB/KRL crossover table; krl carries a marked duplicate to re-sync. Estate
+rule (2026-06-19): every repo carries its own scoped table; crossover content is
+duplicated and marked until resolved, then wired into the other relevant repos.
+`◇` marks proposals not yet canonical.
+
+== Levels
+
+* *MUST* — required to be what it is (RFC 2119 normative).
+* *INTEND* — committed direction.
+* *WISH* — aspirational.
+
+== QuandleDB (own) + KRL crossover
+
+[NOTE]
+====
+*The KRL column is crossover (native to krl), reproduced and marked here.* The
+QuandleDB column is this repo's own scope. Resolve the open items — VerisimCore
+placement; the language-family split; the deferred query-language decision (ADR
+0002) — then update krl's duplicate to match.
+====
+
+[cols="1,4,4,3", options="header"]
+|===
+| Level | QuandleDB (own) | KRL (crossover) | ⊕ Both — shared
+
+| *MUST*
+| Durable store for *presentations, invariants, fingerprints, equivalence
+  classes, witnesses, disambiguation results*; extract quandle presentations
+  from TangleIR; compute fingerprints/colouring invariants; *read-only HTTP
+  server* (`server/serve.jl`) — mutations go via the Skein.jl engine; *host the
+  server-side KRL parser* (`server/krl/`); SPDX headers on all files.
+| Resolution DSL — Construct / Transform / Resolve / Retrieve; lower to TangleIR;
+  *not merely a query language*
+| Rest on TangleIR / Tangle type-safety; *equivalence-integrity = the `a = a`
+  idem core*; honest KRL-stack grounding (no op↔component category error — the
+  four ops run against the QuandleDB+Skein *substrate*)
+
+| *INTEND*
+| Be the canonical persistence + invariant/equivalence face; serve *resolution-
+  relevant* artefacts + provenance + explanations (`query_explain.jl`); raise
+  assurance — move the maths obligations from *property-tested (2026-04-12)*
+  toward discharged proof; lift the READINESS grade above `D`; finish the
+  AffineScript frontend once `affinescript#56` (DOM/fetch) lands
+| Finish RSR-template instantiation; discharge the `PROOF-NEEDS` obligations;
+  keep polynomial/colouring computation in the engine, invoked not
+  language-level ◇
+| KRL *names* the resolution artefacts → QuandleDB *supplies and persists* them;
+  feed Verisim's identity / consonance layer
+
+| *WISH*
+| "maths analogue of a graph database" ◇; re-ground the *withdrawn* schema-v5
+  knot-relation edge layer (was mis-grounded on "KRL = query") against the real
+  4-layer stack
+| A language *family* (KRL + quandle-algebra + narrative-projection) ◇; KRL
+  dialects
+| Verisim federation node (map↔territory anchoring); generic query access —
+  *deferred* (ADR 0002), a legitimate engine-layer affordance, not a KRL surface
+|===
+
+== Spine + cross-repo wiring
+
+The ⊕ MUST cell is load-bearing: *equivalence-integrity*. The `a = a` problem is
+the single thing QuandleDB and krl are unconditionally bound to, from opposite
+ends — QuandleDB *computes, stores, and witnesses* it (wrapping Skein.jl); krl
+*resolves with* it. QuandleDB is database-facing but the stack is *not*
+"SQL-for-knots", and Skein is the engine (not the "Retrieve leg") — both
+anti-framings are ruled out by the 2026-06-18 grounding pass (Skein.jl #20, merged).
+
+Sibling repos' key concerns (keep in sync as crossover resolves): *krl* — the
+resolution DSL surface (holds the duplicated crossover); *tangle* — TangleIR +
+type-safety semantics; *Skein.jl* — the computational engine QuandleDB wraps;
+*echo-types* — structured-loss theory + the identity-fabric framing
+(Conway·Fichte / Bruner / Ricoeur). See `../../AFFIRMATION.adoc`.

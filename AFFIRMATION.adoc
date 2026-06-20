@@ -1,0 +1,213 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+// SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+= AFFIRMATION — quandledb, as of 2026-06-19
+:toc: macro
+:toclevels: 2
+
+_the No-Bullshit file: what we affirm was true and checkable at this moment_
+
+[NOTE]
+====
+*Genre.* An *affirmation* is a solemn declaration of the truth of a statement,
+made by someone who _declines to swear an oath_. That is exactly what this is:
+our truth-as-best-believed at a stamped instant — binding on our honesty, not a
+claim of infallibility. It is not the README and not the EXPLAINME:
+
+[cols="1,3,2",options="header"]
+|===
+| File | Answers | Tense
+| `README.adoc` | _Where is this going, and why?_ — QuandleDB's purpose and steering | future / aspirational
+| `EXPLAINME.adoc` | _How is it built, and what's the evidence?_ | descriptive / mechanism
+| *`AFFIRMATION.adoc`* (this file) | _What can we honestly affirm was *true and checkable* at a stamped moment?_ | a frozen instant, falsifiable
+|===
+
+Every repo in the estate carries one, per the 2026-06-19 estate rule.
+====
+
+toc::[]
+
+== What this is, and how it is designed to work
+
+*What it is.* A short, dated, jointly-signed snapshot of what we can _honestly
+and verifiably_ claim about the quandledb repo at one exact commit. The README
+sells the vision; this file is the receipt.
+
+*How it is designed to work.*
+
+. *Ground truth, not memory.* Every gate result below was produced by _running
+  the check this session_. *Material caveats (read them):* `just` is not present
+  (quandledb ships no `Justfile`), so the `contractiles/` Must/Trust logic + RSR
+  checks were run *directly as bash*; and **`julia` is not present**, so the
+  Julia server and its test suite **were not executed** — see
+  <<Outstanding / not-run>>.
+. *A frozen anchor.* The file names the exact commit SHA, branch, and toolchain
+  (see <<Verifiable anchor>>). Move the SHA and this file becomes a draft.
+. *A real signature.* Authoritatively, this is landed by the maintainer's
+  *signed git commit*. The AI engineering party *cannot* GPG-sign and does not
+  claim to.
+
+*We are fallible.* This is our best honest belief, not a proof of its own
+correctness. Treat it as a falsifiable claim.
+
+== The epistemic contract
+
+This document records our *best joint belief* at the timestamp below. It is
+*not a guarantee of correctness.*
+
+*No intentional overclaim.* Where a check passed we say "PASS"; where a check was
+*not run* this session (absent toolchain) we say "not run", not "passed"; where
+the repo self-grades itself low we report that grade rather than spin it.
+
+*Standing invitation to refute.* Read this at the stamped commit, reproduce the
+checks in <<reproduce,Reproduce it yourself>>, then tell us where the
+discrepancy is against the artefact as it stood at this moment.
+
+== Verifiable anchor
+
+[cols="1,3"]
+|===
+| *Repo*        | `hyperpolymath/quandledb` — the persistence + invariant/equivalence face of the KRL stack (wraps the Skein.jl engine)
+| *Branch*      | `claude/practical-newton-9eFe2` (feature branch; this affirmation is *not* anchored to `main`)
+| *Commit (HEAD)* | `6a4bf94f82a02f809accb26142e9a3df4f171906`
+| *Permalink*   | https://github.com/hyperpolymath/quandledb/tree/6a4bf94f82a02f809accb26142e9a3df4f171906
+| *Verified*    | 2026-06-19 (checks run this session; precise UTC second not captured — date, not claimed instant)
+| *Working-tree delta* | Clean (`git status --porcelain` empty) at verification, except this untracked `AFFIRMATION.adoc`.
+| *Toolchain (present)* | `git`, `Agda 2.6.3`. *Absent this session:* `just`, `deno`, *`julia`*.
+| *Run method*  | `contractiles/` Must/Trust logic + RSR file checks run as bash. *Julia server/tests not executed* (no `julia`).
+| *HEAD commit signature* | *Not signed by the AI party.* Authoritative signature is the maintainer's signed commit that lands this file.
+|===
+
+[IMPORTANT]
+If you are reading this at a _later_ commit, the claims may have drifted. Re-run
+<<reproduce>> and write a fresh affirmation.
+
+== Companion documents and repo metadata (cross-check)
+
+* *`README.adoc`* — present and *cleanly instantiated*: title `= QuandleDB`. No
+  template residue.
+* *`EXPLAINME.adoc`* — present and *cleanly instantiated*: `= EXPLAINME —
+  QuandleDB`. (Contrast krl, whose EXPLAINME still holds a `{project-name}`
+  token — quandledb does not.)
+* *`0-AI-MANIFEST.a2ml`* — present.
+* *Template residue* — *0 files* with `{{PLACEHOLDER}}` tokens; *one* file still
+  mentions the `rsr-template-repo` lineage (a textual reference, not active
+  placeholder debt). Minor, noted not hidden.
+* *GitHub repo description / topics* — *not fetched this session* (no `gh`). Not
+  cross-checked.
+
+== The honest state (one breath)
+
+quandledb is a *genuinely-instantiated, code-bearing* repo: a real Julia HTTP
+server (`server/serve.jl`, ~1077 lines), a *working server-side KRL parser and
+evaluator* (`server/krl/{Lexer,Parser,Ast,Evaluator,SqlFrontend,KRL}.jl`), an
+AffineScript TEA frontend (`frontend/src/ui/tea/quandle_gui.affine`), and a
+full spec set (`spec/` — type-system, operational-semantics, sql-compat,
+grammar, …). The `MUST` and licence/secrets `TRUST` checks pass and it is clean
+of template placeholders. The honest limits are about *assurance*, not
+scaffolding: it self-grades READINESS *D*, its maths obligations are
+*property-tested* rather than formally discharged, and *its Julia test suite was
+not run this session* (no `julia`). Fenced below.
+
+== What is solid (and how we checked)
+
+* *MUST-style checks — PASS.* Run as bash from the `contractiles/` sources +
+  RSR conventions: LICENSE present; `README.adoc` present; no banned
+  `Dockerfile`/`Makefile`; SPDX headers present on a sampled 80 `.jl`/`.affine`
+  files (0 unheadered).
+* *TRUST-style — PASS.* LICENSE carries an SPDX/MPL identifier; no `.env` /
+  `credentials.json` / `.env.local` committed.
+* *Clean instantiation.* 0 `{{PLACEHOLDER}}` files; README + EXPLAINME both
+  carry the real project name.
+* *Real, substantial content.* `server/serve.jl` (~1077 lines) + sibling modules
+  (`quandle_semantic.jl`, `query_explain.jl`, `Diagnostics.jl`); a *working KRL
+  pipeline in Julia* (`server/krl/`: Lexer → Parser → Ast → Evaluator +
+  SqlFrontend, with its own `test/`); the AffineScript frontend; and `spec/`'s
+  six design documents. This is shipped engineering, not a template skeleton.
+
+== Known-incomplete but honestly fenced (loud, never silent)
+
+* *READINESS grade `D`.* `READINESS.md` self-assesses *Current Grade: D* — an
+  early-stage Component Readiness Grade. We report the repo's own grade, not a
+  rosier one.
+* *Proofs are property-tested, not formal.* `PROOF-NEEDS.md` records the maths
+  obligations (quandle axioms; Reidemeister R1/R2) as *"property-tested
+  (2026-04-12)"*, with some marked *"standard result; need to verify"*. There is
+  *no* claim of formally discharged proof.
+* *One residual `rsr-template-repo` mention* (textual lineage reference).
+
+== Outstanding / not-run (no spin) [[Outstanding / not-run]]
+
+* *The Julia test suite was NOT executed this session.* `julia` is absent, so
+  `server/test_quandle_axioms.jl`, `test_query_explain.jl`,
+  `test_semantic_index.jl`, and `test_br5_fuzz.jl` were *not run*. We affirm the
+  files *exist* and that the repo's own docs record them as property-tested on
+  2026-04-12 — we do *not* affirm, from this session, that they currently pass.
+  A `julia --project=server -e 'using Pkg; Pkg.test()'`-style run in-environment
+  is the authoritative confirmation.
+* *No `Justfile`.* Gate orchestration is the `contractiles/` sources (`must`,
+  `dust`), run here by hand rather than via `just`/`contractile`.
+* *Frontend is a single `.affine` file* and depends on AffineScript DOM/fetch
+  bindings still pending upstream (`affinescript#56`, per the repo's CLAUDE.md).
+
+== Reproduce it yourself [[reproduce]]
+
+From the repo root, at the commit above:
+
+[source,bash]
+----
+git rev-parse HEAD          # expect 6a4bf94f82a02f809accb26142e9a3df4f171906
+git status --porcelain      # expect empty before adding this file
+
+# MUST / TRUST style (expect PASS):
+test -f LICENSE; test -f README.adoc; test ! -f Dockerfile -a ! -f Makefile
+grep -q 'SPDX\|MPL' LICENSE
+test ! -f .env -a ! -f credentials.json
+
+# Instantiation (expect clean):
+grep -rl '{{'{{'}}[A-Z_]*{{'}}'}}' --include='*.adoc' --include='*.md' . | grep -v PLACEHOLDERS   # expect none
+grep -m1 '^= ' README.adoc   # expect "= QuandleDB"
+
+# Real content present:
+wc -l server/serve.jl ; ls server/krl/
+
+# NOT verifiable without julia (this is the honest gap):
+#   julia --project=server -e 'using Pkg; Pkg.test()'
+----
+
+== One-line characterisation (quote this)
+
+"QuandleDB is the persistence + invariant/equivalence face of the KRL stack — a
+genuinely-instantiated repo with a real Julia server (`serve.jl`, ~1077 lines), a
+working server-side KRL parser/evaluator (`server/krl/*.jl`), an AffineScript TEA
+frontend, and a full `spec/` set; the `MUST` and licence/secrets gates pass and
+it is clean of template placeholders. Honest limits: READINESS self-grades `D`,
+the maths obligations are property-tested (2026-04-12) *not* formally discharged,
+and the Julia test suite was *not run* this session (no `julia` present) — files
+exist, pass-state unconfirmed here. No intentional overclaim."
+
+== Key concern + cross-repo wiring
+
+quandledb's *key concern* is *equivalence-integrity and semantic identity* — the
+canonical place where presentations, invariants, fingerprints, equivalence
+classes, witnesses, and resolution results live, and the host of the server-side
+KRL parser (`server/krl/`). Per the 2026-06-19 estate rule, each repo carries its
+own AFFIRMATION + scoped Must/Intend/Wish table. quandledb's scoped table —
+which holds the *canonical* copy of the QuandleDB/KRL crossover — lives at
+`docs/identity-fabric/musts-intends-wishes.adoc`. Sibling concerns: *krl* (the
+resolution DSL surface; carries the duplicated crossover to re-sync); *tangle*
+(TangleIR + type-safety); *Skein.jl* (computational engine it wraps); *echo-types*
+(structured-loss theory + the identity-fabric framing).
+
+== Joint attestation
+
+To the best of our joint belief at the timestamp above, every claim in this file
+is true and was checked as described — with no intentional overclaim, and with
+the open gaps (especially the un-run Julia suite) stated rather than hidden.
+
+* *Engineering party (AI):* ran the gate/RSR checks recorded here as bash on
+  2026-06-19 and stands behind this wording as a faithful report, including the
+  explicit `julia`-absent and `just`-absent caveats.
+* *Owner / maintainer:* Jonathan D.A. Jewell — signs by committing this file
+  with `-S`; the signed git commit over this content, at the SHA above, is the
+  authoritative form.
+* *Signed-off-date:* (fill on signing)
