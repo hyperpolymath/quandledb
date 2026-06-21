@@ -81,4 +81,5 @@ Sibling repos' key concerns (keep in sync as crossover resolves): *krl* — the
 resolution DSL surface (holds the duplicated crossover); *tangle* — TangleIR +
 type-safety semantics; *Skein.jl* — the computational engine QuandleDB wraps;
 *echo-types* — structured-loss theory + the identity-fabric framing
-(Conway·Fichte / Bruner / Ricoeur). See `../../AFFIRMATION.adoc`.
+(Conway·Fichte / Bruner / Ricoeur); *KnotTheory.jl* — knot-theory mathematics library (Skein weak-dep);
+*nextgen-typing* — type-theory coordination monorepo. See `../../AFFIRMATION.adoc`.
