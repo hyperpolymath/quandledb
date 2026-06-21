@@ -23,9 +23,11 @@ duplicated and marked until resolved, then wired into the other relevant repos.
 [NOTE]
 ====
 *The KRL column is crossover (native to krl), reproduced and marked here.* The
-QuandleDB column is this repo's own scope. Resolve the open items — VerisimCore
-placement; the language-family split; the deferred query-language decision (ADR
-0002) — then update krl's duplicate to match.
+QuandleDB column is this repo's own scope. *VerisimCore placement is now resolved*
+(maintainer-confirmed 2026-06-19: krl → tangle/TangleIR → VerisimCore (categorical
+abstraction) → Skein/QuandleDB). Once the remaining open items resolve — the
+language-family split; the deferred query-language decision (ADR 0002) — then
+update krl's duplicate to match.
 ====
 
 [cols="1,4,4,3", options="header"]
