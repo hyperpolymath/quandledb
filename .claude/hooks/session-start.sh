@@ -7,17 +7,18 @@
 # QuandleDB spans three toolchains the cloud image lacks:
 #   * Julia        — the read-only HTTP server (server/, wraps Skein.jl)
 #   * Elixir       — the BEAM layer (beam/, requires Elixir ~> 1.19 / OTP 26+)
-#   * AffineScript — the TEA frontend (frontend/): a from-source OCaml/Dune
-#                    compiler, invoked through Deno tasks
+#   * AffineScript — the TEA frontend (frontend/): an OCaml/Dune compiler,
+#                    invoked through Deno tasks (we install its prebuilt binary)
 #
 # The hook installs what it can and best-effort prefetches deps. Cloud-only;
 # every step is guarded so nothing aborts session startup.
 #
 # ─ FEASIBILITY CAVEATS (read before relying on this) ──────────────────
-# On the default "Trusted" network allowlist this hook usefully installs only
-# **Deno**; the rest are blocked and skip cleanly. They complete under "Full"
-# network access (or a Custom allowlist that adds the hosts below), and most
-# belong in a cached **setup script** rather than a per-session hook:
+# On the default "Trusted" network allowlist this hook installs **Deno** and a
+# prebuilt **AffineScript** binary (both from GitHub releases). **Julia** and
+# **Elixir** stay blocked and skip cleanly; they complete under "Full" network
+# access (or a Custom allowlist that adds the hosts below), and the heavier
+# installs belong in a cached **setup script** rather than a per-session hook:
 #   * Julia     — julialang.org / juliaup hosts are not allowlisted (403). AND
 #                 server/Project.toml [sources] path-deps point at sibling
 #                 repos (../../../Skein.jl, KnotTheory.jl, AcceleratorGate.jl)
@@ -26,9 +27,11 @@
 #   * Elixir    — beam/ wants `~> 1.19`, which needs Erlang/OTP 26+, newer than
 #                 apt's OTP 25; and `mix deps.get` needs Hex (repo.hex.pm),
 #                 also not allowlisted.
-#   * AffineScript — a from-source OCaml build (~15 opam packages + dune). opam's
-#                 registry (opam.ocaml.org) is not allowlisted, and a per-session
-#                 source build is far too slow — strongly prefer a setup script.
+#   * AffineScript — installed from a prebuilt release binary (v0.1.1, checksum-
+#                 pinned), so no opam/OCaml build is needed. Caveat: the latest
+#                 tag v0.2.0 is source-only, so we pin v0.1.1 (the newest release
+#                 that attaches a runnable binary); v0.2.0-only syntax would need
+#                 a source build (opam + dune) or upstream-attached binaries.
 #
 # https://code.claude.com/docs/en/claude-code-on-the-web
 set -uo pipefail
@@ -86,20 +89,24 @@ install_julia() {
   fi
 }
 
-# ── AffineScript: from-source OCaml/Dune build (only if opam reachable) ─
+# ── AffineScript: prebuilt binary (GitHub release — works on Trusted) ──
+# The compiler is OCaml/Dune, but release v0.1.1 attaches prebuilt binaries,
+# so we fetch the Linux x86-64 one and verify it against the upstream SHA256
+# rather than running a ~15-package opam source build. The latest tag v0.2.0
+# is source-only, hence the v0.1.1 pin (see header caveats).
+AFFINE_VER="v0.1.1"
+AFFINE_SHA256="b8f2cab7380306ca07b9599d7fe2470328236e7287a51c78c3bbb5e973fef5dc"
 install_affinescript() {
   command -v affinescript >/dev/null 2>&1 && return 0
-  if reachable https://opam.ocaml.org; then
-    log "building AffineScript from source (OCaml/Dune — heavy; prefer a setup script)…"
-    run git clone --depth 1 https://github.com/hyperpolymath/affinescript /opt/affinescript
-    run apt-get install -y -qq opam
-    run opam init --disable-sandboxing -y -q
-    run bash -c 'eval "$(opam env)"; opam install -y -q dune sedlex menhir ppx_deriving ppx_sexp_conv sexplib0 fmt cmdliner yojson js_of_ocaml js_of_ocaml-ppx js_of_ocaml-compiler'
-    run bash -c 'eval "$(opam env)"; cd /opt/affinescript && dune build'
-    [ -f /opt/affinescript/_build/default/bin/main.exe ] &&
-      run ln -sf /opt/affinescript/_build/default/bin/main.exe /usr/local/bin/affinescript
+  log "installing AffineScript ${AFFINE_VER} (prebuilt Linux binary, checksum-pinned)…"
+  local bin="${TMPDIR:-/tmp}/affinescript-linux-x64"
+  run curl -fsSL -o "$bin" \
+    "https://github.com/hyperpolymath/affinescript/releases/download/${AFFINE_VER}/affinescript-linux-x64" || return 0
+  if echo "${AFFINE_SHA256}  ${bin}" | sha256sum -c - >>"$LOG" 2>&1; then
+    run install -m 0755 "$bin" /usr/local/bin/affinescript
   else
-    log "skipping AffineScript — opam registry blocked on this network (see header caveats)."
+    log "AffineScript checksum mismatch — refusing to install (see log)."
+    run rm -f "$bin"
   fi
 }
 
