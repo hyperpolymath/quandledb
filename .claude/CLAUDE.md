@@ -38,7 +38,7 @@ julia --project=server server/serve.jl data/knots.db --port 8080 --static public
 - Server is read-only (database mutations via Skein.jl REPL)
 - Frontend is an AffineScript TEA program (Model/Msg/init/update/view/subs), mirroring nextgen-databases/nqc/src/ui/tea/nqc_gui.affine
 - JSON field names use snake_case (matching Skein.jl schema)
-- AffineScript files use SPDX headers (`SPDX-License-Identifier: MPL-2.0`)
+- AffineScript files use SPDX headers (`SPDX-License-Identifier: CC-BY-SA-4.0`)
 - SCM files in `.machine_readable/` ONLY
 
 ## Machine-Readable Artefacts
