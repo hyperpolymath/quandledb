@@ -48,7 +48,7 @@ using Test
 include("../KRL.jl")
 using .KRL: parse_krl, parse_krl_query, parse_sql, parse_any, KRLParseError,
             eval_krl_program, make_eval_context, EvalContext, EvalResult,
-            KRLEvalError, DataProvider, SemProvider,
+            KRLEvalError, KRLLexError, DataProvider, SemProvider,
             fetch_all, fetch_one, count, equiv_buckets, fetch_invariants,
             PushdownHints, extract_pushdown!
 
