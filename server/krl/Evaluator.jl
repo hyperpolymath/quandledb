@@ -321,6 +321,11 @@ function _eval_query(query::KRLQuery, ctx::EvalContext)
                              0, length(rows),
                              (time()-src_t0)*1000, src_note))
 
+    if length(rows) > ctx.max_rows
+        resize!(rows, ctx.max_rows)
+        push!(warnings, "row cap $(ctx.max_rows) applied after source")
+    end
+
     # ── Apply stages ────────────────────────────────────────────────────────
     for stage in query.stages
         _check_timeout(ctx)
@@ -421,7 +426,10 @@ function _resolve_skein_source(ctx::EvalContext, stages::Vector{KRLPipeStage})
                      determinant     = hints.determinant,
                      signature       = hints.signature,
                      name_like       = hints.name_like,
-                     limit           = something(hints.limit, ctx.max_rows))
+                     # One past the cap so the post-stage cap check can tell
+                     # "exactly max_rows rows exist" from "truncated" and emit
+                     # its warning; an explicit user limit is not a cap.
+                     limit           = something(hints.limit, ctx.max_rows + 1))
     pushdown_used = note != "full scan"
     rows, pushdown_used, note
 end
