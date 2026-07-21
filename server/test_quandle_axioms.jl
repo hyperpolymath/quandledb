@@ -209,12 +209,7 @@ end
         d_canonical  = quandle_descriptor(trefoil_canonical)
 
         @test d_simplified.colouring_count_3 == d_canonical.colouring_count_3
-        # KNOWN-BROKEN (upstream): KnotTheory.jl r2_simplify removes the bigon
-        # without re-splicing the severed arcs, leaving 4 arc labels that occur
-        # only once; the extracted presentation then has 5 generators instead
-        # of 3 and c5 comes out 25 instead of 5. Flips to "unexpected pass"
-        # (forcing removal of this marker) once the upstream fix lands.
-        @test_broken d_simplified.colouring_count_5 == d_canonical.colouring_count_5
+        @test d_simplified.colouring_count_5 == d_canonical.colouring_count_5
     end
 end
 
