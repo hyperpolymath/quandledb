@@ -142,7 +142,7 @@ Two presentations produce the same canonical form iff they represent the
 same presentation up to generator renaming. This is the basis for
 `canonical_presentation_blob`'s fingerprint.
 """
-function canonicalize_presentation(p::QuandlePresentation)::QuandlePresentation
+function _canonicalize_pass(p::QuandlePresentation)::QuandlePresentation
     sorted_rel = sort(p.relations, by = r -> (r.lhs, r.rhs, r.out, r.is_inverse ? 1 : 0))
 
     mapping = Dict{Int, Int}()
@@ -173,6 +173,51 @@ function canonicalize_presentation(p::QuandlePresentation)::QuandlePresentation
 end
 
 """
+    canonicalize_presentation(p::QuandlePresentation) -> QuandlePresentation
+
+Idempotent canonicalisation. A single relabel-and-resort pass is not
+idempotent: it relabels by first appearance in the *old* ordering and then
+re-sorts under the *new* labels, so a second pass can see a different order
+and relabel again. Iterating the pass from any start eventually enters a
+cycle (finite deterministic orbit); every member of that cycle reaches the
+same cycle again, so returning the cycle's lexicographically-minimal
+serialisation is a true fixpoint: canonicalize(canonicalize(p)) ==
+canonicalize(p). Where the single pass was already stable (the common case,
+and everything previously stored) the result is unchanged.
+"""
+function canonicalize_presentation(p::QuandlePresentation)::QuandlePresentation
+    order = String[]
+    states = Dict{String, QuandlePresentation}()
+    cur = p
+    while true
+        cur = _canonicalize_pass(cur)
+        s = _presentation_serial(cur)
+        if haskey(states, s)
+            i = findfirst(==(s), order)
+            cycle = order[i:end]
+            return states[minimum(cycle)]
+        end
+        push!(order, s)
+        states[s] = cur
+    end
+end
+
+"""
+    _presentation_serial(c::QuandlePresentation) -> String
+
+Serialise a presentation as `qpres-v1|g=<n>|r=lhs,rhs,out,sign;...` without
+hashing. `canonical_presentation_blob` hashes this for canonical forms.
+"""
+function _presentation_serial(c::QuandlePresentation)::String
+    rel_tokens = String[]
+    for r in c.relations
+        sign_flag = r.is_inverse ? -1 : 1
+        push!(rel_tokens, string(r.lhs, ",", r.rhs, ",", r.out, ",", sign_flag))
+    end
+    string("qpres-v1|g=", c.generator_count, "|r=", join(rel_tokens, ";"))
+end
+
+"""
     canonical_presentation_blob(p::QuandlePresentation) -> String
 
 Serialise `p` to a canonical text blob after applying `canonicalize_presentation`.
@@ -184,13 +229,7 @@ generator renaming). This blob is the input to SHA-256 fingerprinting in
 `quandle_descriptor`.
 """
 function canonical_presentation_blob(p::QuandlePresentation)::String
-    c = canonicalize_presentation(p)
-    rel_tokens = String[]
-    for r in c.relations
-        sign_flag = r.is_inverse ? -1 : 1
-        push!(rel_tokens, string(r.lhs, ",", r.rhs, ",", r.out, ",", sign_flag))
-    end
-    blob = string("qpres-v1|g=", c.generator_count, "|r=", join(rel_tokens, ";"))
+    blob = _presentation_serial(canonicalize_presentation(p))
     # Compute BLAKE3 hash of the blob
     ctx = Blake3Hash.Blake3Ctx()
     Blake3Hash.update!(ctx, Vector{UInt8}(blob))

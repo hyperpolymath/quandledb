@@ -38,11 +38,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v4
 
-      - name: Install Julia 1.10
+      # Julia >= 1.11 is required: server/Project.toml uses a [sources] table
+      # (path-resolved sibling deps), which Pkg 1.10 silently ignores — the
+      # instantiate then fails with "expected package … to be registered".
+      - name: Install Julia 1.12
         run: |
           set -euo pipefail
           curl -fsSL https://install.julialang.org -o "$RUNNER_TEMP/juliaup-init.sh"
-          sh "$RUNNER_TEMP/juliaup-init.sh" --yes --default-channel 1.10
+          sh "$RUNNER_TEMP/juliaup-init.sh" --yes --default-channel 1.12
           echo "$HOME/.juliaup/bin" >> "$GITHUB_PATH"
 
       - name: Julia version
