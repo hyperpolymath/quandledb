@@ -1,15 +1,18 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2026 Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
 #
-# KRL Verification — runs the self-contained KRL lexer/parser/SQL test suite
-# (pure Julia: the `KRL` module pulls in no external packages, so it loads on
-# base Julia with no Pkg.instantiate) AND machine-checks the Agda proofs under
-# verification/proofs/agda.
+# KRL Verification — runs the KRL lexer/parser/SQL/seam test suites (pure
+# Julia: the `KRL` module pulls in no external packages, so those load on base
+# Julia with no Pkg.instantiate), the full server test suites (quandle axioms /
+# EXPLAIN / BR-5 fuzz — these need the sibling KnotTheory.jl / Skein.jl /
+# AcceleratorGate.jl checkouts that server/Project.toml [sources] points at),
+# machine-checks the Agda proofs under verification/proofs/agda, AND
+# model-checks the TLA+ specs under verification/proofs/tlaplus with TLC.
 #
-# Why this exists: `.gitlab-ci.yml` only defines jobs gated on `Cargo.toml` /
-# `mix.exs`, neither of which this (Julia + ReScript) repo has — so the Julia
-# test suite was never executed by any CI gate. This workflow closes that gap
-# so lexer/parser regressions are caught in future.
+# Why this exists: `.gitlab-ci.yml` only defines jobs gated on root-level
+# `Cargo.toml` / `mix.exs` (this repo has only `beam/mix.exs`, which those
+# `exists:` rules never match) — so the Julia test suite was never executed by
+# any CI gate. This workflow closes that gap so regressions are caught.
 
 name: KRL Verification
 
@@ -45,14 +48,63 @@ jobs:
       - name: Julia version
         run: julia --version
 
-      - name: Run KRL test suite
+      - name: Run KRL test suite (no package deps)
         run: |
           set -e
           # Each test file includes ../KRL.jl (or ../Lexer.jl) relative to its
           # own location; a top-level @testset throws on failure → non-zero exit.
+          # These four are pure Julia + stdlib and run before instantiate so a
+          # dependency-resolution breakage cannot mask a lexer/parser regression.
           julia --color=yes server/krl/test/lexer_test.jl
           julia --color=yes server/krl/test/parser_test.jl
           julia --color=yes server/krl/test/sql_test.jl
+          julia --color=yes server/krl/test/seam_test.jl
+
+      # server/Project.toml [sources] resolves KnotTheory/Skein/AcceleratorGate
+      # at server/../../../<name>.jl — i.e. two directories above the repo
+      # checkout ($GITHUB_WORKSPACE/../../<name>.jl). actions/checkout cannot
+      # write outside the workspace, so check out under deps/ and symlink.
+      - name: Checkout KnotTheory.jl
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v4
+        with:
+          repository: hyperpolymath/KnotTheory.jl
+          path: deps/KnotTheory.jl
+
+      - name: Checkout Skein.jl
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v4
+        with:
+          repository: hyperpolymath/Skein.jl
+          path: deps/Skein.jl
+
+      - name: Checkout AcceleratorGate.jl
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v4
+        with:
+          repository: hyperpolymath/AcceleratorGate.jl
+          path: deps/AcceleratorGate.jl
+
+      - name: Link sibling packages where server/Project.toml expects them
+        run: |
+          set -euo pipefail
+          for p in KnotTheory.jl Skein.jl AcceleratorGate.jl; do
+            ln -sfn "$GITHUB_WORKSPACE/deps/$p" "$GITHUB_WORKSPACE/../../$p"
+          done
+
+      - name: Instantiate server project
+        run: julia --color=yes --project=server -e 'using Pkg; Pkg.instantiate()'
+
+      # Each server suite is its own step so a failure names itself in the UI.
+      # Two known-broken upstream KnotTheory.jl defects are tracked inside the
+      # suites with @test_broken (r2_simplify arc re-splicing; polynomial
+      # order-sensitivity in quandle_key) — @test_broken flips to a hard error
+      # the moment the upstream fix lands, forcing the marker's removal.
+      - name: Quandle axioms + Reidemeister invariance
+        run: julia --color=yes --project=server server/test_quandle_axioms.jl
+
+      - name: KRL EXPLAIN (DB-6)
+        run: julia --color=yes --project=server server/test_query_explain.jl
+
+      - name: BR-5 crossing-order fuzz
+        run: julia --color=yes --project=server server/test_br5_fuzz.jl
 
   agda-proofs:
     name: Agda proofs (--safe)
@@ -91,3 +143,32 @@ jobs:
           done
           if [ "$found" = "0" ]; then echo "No Agda proofs found"; exit 1; fi
           echo "PASS: all Agda proofs check under --safe"
+
+  tlaplus-model-check:
+    name: TLA+ model check (TLC)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v4
+
+      # The ubuntu-latest image ships a Temurin JDK; TLC needs Java 11+.
+      - name: Fetch TLA+ tools (pinned release, checksum-verified)
+        run: |
+          set -euo pipefail
+          curl -fsSL -o tla2tools.jar \
+            https://github.com/tlaplus/tlaplus/releases/download/v1.7.4/tla2tools.jar
+          echo "936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88  tla2tools.jar" \
+            | sha256sum -c -
+
+      - name: Model-check MCEGraph (TypeOK / IsEquivalence / SoundBelow / Confluent)
+        run: |
+          set -euo pipefail
+          test -f verification/proofs/tlaplus/MCEGraph.tla || { echo "::error::MCEGraph.tla missing — nothing was model-checked"; exit 1; }
+          test -f verification/proofs/tlaplus/MCEGraph.cfg || { echo "::error::MCEGraph.cfg missing — nothing was model-checked"; exit 1; }
+          # -deadlock disables deadlock REPORTING only (the merge sequence
+          # legitimately terminates); every INVARIANT in the .cfg is still
+          # checked and any violation exits non-zero.
+          ( cd verification/proofs/tlaplus && \
+            java -XX:+UseParallelGC -cp "$GITHUB_WORKSPACE/tla2tools.jar" \
+              tlc2.TLC -deadlock -config MCEGraph.cfg MCEGraph.tla )
+          echo "PASS: TLC checked all invariants in MCEGraph.cfg"
