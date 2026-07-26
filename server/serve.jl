@@ -23,6 +23,8 @@ using SHA
 include("quandle_semantic.jl")
 using .QuandleSemantic
 
+include("query_explain.jl")
+
 include("Diagnostics.jl")
 include("krl/KRL.jl")
 using .KRL: parse_any, parse_krl, parse_sql, KRLParseError, KRLLexError,
@@ -63,23 +65,6 @@ CREATE TABLE IF NOT EXISTS semantic_schema_info (
 );
 """
 
-const SEMANTIC_INDEX_STATEMENTS = [
-    "CREATE INDEX IF NOT EXISTS idx_semantic_hash ON quandle_semantic_index(descriptor_hash)",
-    "CREATE INDEX IF NOT EXISTS idx_semantic_key ON quandle_semantic_index(quandle_key)",
-    "CREATE INDEX IF NOT EXISTS idx_semantic_crossing ON quandle_semantic_index(crossing_number)",
-    "CREATE INDEX IF NOT EXISTS idx_semantic_determinant ON quandle_semantic_index(determinant)",
-    "CREATE INDEX IF NOT EXISTS idx_semantic_signature ON quandle_semantic_index(signature)",
-    "CREATE INDEX IF NOT EXISTS idx_semantic_col3 ON quandle_semantic_index(colouring_count_3)",
-    "CREATE INDEX IF NOT EXISTS idx_semantic_col5 ON quandle_semantic_index(colouring_count_5)",
-    # DB-3 Phase A additions (see docs/db-3-index-strategy.md):
-    # writhe / genus / quandle_generator_count are accepted as filter
-    # parameters in GET /api/knots and GET /api/semantic but were not
-    # indexed; queries forced O(n) scans. B-tree per the audit.
-    "CREATE INDEX IF NOT EXISTS idx_semantic_writhe ON quandle_semantic_index(writhe)",
-    "CREATE INDEX IF NOT EXISTS idx_semantic_genus ON quandle_semantic_index(genus)",
-    "CREATE INDEX IF NOT EXISTS idx_semantic_gencount ON quandle_semantic_index(quandle_generator_count)",
-]
-
 const REQUIRED_SEMANTIC_COLUMNS = [
     ("descriptor_version", "TEXT"),
     ("descriptor_hash", "TEXT"),
@@ -116,8 +101,12 @@ mutable struct SemanticIndexDB
         end
 
         _ensure_semantic_columns!(conn)
-        for stmt in SEMANTIC_INDEX_STATEMENTS
-            DBInterface.execute(conn, stmt)
+        
+        # Create standard indices via Skein.jl (DB-3 Phase B)
+        for col in ["descriptor_hash", "quandle_key", "crossing_number", "determinant",
+                    "signature", "colouring_count_3", "colouring_count_5",
+                    "writhe", "genus", "quandle_generator_count"]
+            Skein.create_index!(conn, "quandle_semantic_index", col)
         end
 
         DBInterface.execute(conn,
@@ -756,7 +745,7 @@ function handle_semantic_equivalents(db::SkeinDB, sdb::SemanticIndexDB, name::St
     ))
 end
 
-function handle_semantic_index(sdb::SemanticIndexDB, params::Dict{String, String})
+function _build_semantic_query_sql(params::Dict{String, String})
     crossing_number = parse_int_param(params, "crossing_number")
     determinant_val = parse_int_param(params, "determinant")
     signature_val = parse_int_param(params, "signature")
@@ -809,8 +798,35 @@ function handle_semantic_index(sdb::SemanticIndexDB, params::Dict{String, String
     push!(args, limit)
     push!(args, offset)
 
+    return sql, args, limit, offset
+end
+
+function handle_semantic_index(sdb::SemanticIndexDB, params::Dict{String, String})
+    sql, args, limit, offset = _build_semantic_query_sql(params)
     rows = [semantic_to_dict(row) for row in DBInterface.execute(sdb.conn, sql, args)]
     json_response(Dict("semantic_index" => rows, "count" => length(rows), "limit" => limit, "offset" => offset))
+end
+
+function handle_explain(db::SkeinDB, sdb::SemanticIndexDB, params::Dict{String, String})
+    endpoint = get(params, "endpoint", nothing)
+    if endpoint == "semantic"
+        sql, args, limit, offset = _build_semantic_query_sql(params)
+        plan = explain_query_plan(sdb.conn, sql, args)
+        return json_response(Dict("query_plan" => plan, "plan_summary" => plan_summary(plan)))
+    end
+
+    raw_sql = get(params, "sql", nothing)
+    if !isnothing(raw_sql)
+        if !is_select_only(raw_sql)
+            return error_response("Mutation prohibited. EXPLAIN is restricted to SELECT/WITH queries."; status=403)
+        end
+        # Phase B: explain raw SQL using the DB connection (could be SkeinDB or SemanticIndexDB)
+        # Assuming the raw SQL queries the main Skein database
+        plan = explain_query_plan(db.conn, raw_sql, Any[])
+        return json_response(Dict("query_plan" => plan, "plan_summary" => plan_summary(plan)))
+    end
+
+    error_response("Missing 'endpoint=semantic' or 'sql=...' parameter"; status=400)
 end
 
 function handle_krl_query(data::DataProvider, sem::SemProvider,
@@ -997,6 +1013,8 @@ function router(db::SkeinDB, sdb::SemanticIndexDB, static_dir::String,
     m_sem = match(r"^/api/semantic/(.+)$", path)
     !isnothing(m_sem) &&
         return handle_semantic_detail(db, sdb, m_sem.captures[1])
+
+    path == "/api/explain" && return handle_explain(db, sdb, params)
 
     m_knot = match(r"^/api/knots/(.+)$", path)
     !isnothing(m_knot) &&
