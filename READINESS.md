@@ -30,9 +30,9 @@ Zig FFI + zig API + Elixir BEAM NIFs.
 ## Gaps preventing higher grades
 
 ### Blocks C (works reliably + annotated)
-- No EXPLAINME.adoc, TEST-NEEDS.md, PROOF-NEEDS.md at repo root.
+- ~~No EXPLAINME.adoc, TEST-NEEDS.md, PROOF-NEEDS.md at repo root.~~ *(Added)*
 - Julia server code has no docstrings.
-- Elixir BEAM layer has no dedicated test coverage documented here.
+- ~~Elixir BEAM layer has no dedicated test coverage documented here.~~ *(Added Unit, P2P, Aspect, and Benchmark coverage)*
 - No integration tests spanning the full Idris2 → Zig → V → Julia → Elixir stack.
 - No dogfooding evidence — has anyone actually driven this end-to-end?
 - Only 4 commits in history before absorption into nextgen-databases monorepo.
@@ -42,9 +42,8 @@ Zig FFI + zig API + Elixir BEAM NIFs.
 
 ## What to do for C
 
-1. Add EXPLAINME.adoc explaining the polyglot architecture and its intended
-   users.
-2. Add TEST-NEEDS.md documenting what's tested at each language layer and what isn't.
+1. ~~Add EXPLAINME.adoc explaining the polyglot architecture and its intended users.~~ *(Done)*
+2. ~~Add TEST-NEEDS.md documenting what's tested at each language layer and what isn't.~~ *(Done)*
 3. Write docstrings for `server/serve.jl`, `server/quandle_semantic.jl`.
 4. Add per-language READMEs at `src/abi/`, `src/ffi/`, `src/api/`, `beam/`
    explaining what each layer contributes.
