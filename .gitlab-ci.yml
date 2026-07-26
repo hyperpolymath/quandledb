@@ -67,13 +67,14 @@ mix-audit:
   stage: security
   image: elixir:latest
   script:
+    - cd beam
     - mix local.hex --force
     - mix archive.install hex mix_audit --force
     - mix deps.get
     - mix deps.audit
   rules:
     - exists:
-        - mix.exs
+        - beam/mix.exs
   allow_failure: true
 
 # ==================
@@ -105,21 +106,23 @@ mix-format:
   stage: lint
   image: elixir:latest
   script:
+    - cd beam
     - mix format --check-formatted
   rules:
     - exists:
-        - mix.exs
+        - beam/mix.exs
 
 credo:
   stage: lint
   image: elixir:latest
   script:
+    - cd beam
     - mix local.hex --force
     - mix deps.get
     - mix credo --strict
   rules:
     - exists:
-        - mix.exs
+        - beam/mix.exs
   allow_failure: true
 
 # ==================
@@ -139,12 +142,13 @@ mix-test:
   stage: test
   image: elixir:latest
   script:
+    - cd beam
     - mix local.hex --force
     - mix deps.get
     - mix test
   rules:
     - exists:
-        - mix.exs
+        - beam/mix.exs
 
 # ==================
 # Build
@@ -167,9 +171,10 @@ mix-build:
   stage: build
   image: elixir:latest
   script:
+    - cd beam
     - mix local.hex --force
     - mix deps.get
     - MIX_ENV=prod mix compile
   rules:
     - exists:
-        - mix.exs
+        - beam/mix.exs
