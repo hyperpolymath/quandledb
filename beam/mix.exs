@@ -8,7 +8,11 @@ defmodule QuandleDBNif.MixProject do
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+      test_coverage: [
+        summary: [threshold: 90],
+        ignore_modules: [QuandleDBNif.Native]
+      ]
     ]
   end
 
