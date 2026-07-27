@@ -511,12 +511,23 @@ end
     end
 end
 
-@testset "KT-2 ext: HOMFLY guard returns sentinel above MAX_CROSSINGS" begin
-    # Build a synthetic 16-crossing PD by braid word s1^16. KnotTheory's
-    # MAX_CROSSINGS_FOR_HOMFLY is 15, so this triggers the guard.
+@testset "KT-2 ext: polynomial guards return sentinels above their bounds" begin
+    # Build a synthetic 16-crossing PD by braid word s1^16 — a genuine
+    # (2,16)-torus-link diagram (post KnotTheory#43; before that fix the
+    # broken braid closure made this degenerate and cheap, which is how the
+    # missing guards went unnoticed). 16 crossings exceeds
+    # HOMFLY_MAX_CROSSINGS (15) and ALEXANDER/CONWAY_MAX_CROSSINGS (12,
+    # the O(n!) upstream determinant: 12 → 12s, 13 → 106s, 16 → 6h+ and a
+    # CI job killed at GitHub's 6-hour limit), but not JONES_MAX_CROSSINGS
+    # (20, Kauffman bracket: 2.8s measured at 16).
     pd_large = from_braid_word(join(["s1" for _ in 1:16], ".")).pd
     d_large = quandle_descriptor(pd_large)
-    @test d_large.homfly_polynomial == "deferred:too_many_crossings"
+    @test d_large.homfly_polynomial == HOMFLY_DEFERRED_SENTINEL
+    @test d_large.alexander_polynomial == HOMFLY_DEFERRED_SENTINEL
+    @test d_large.conway_polynomial == HOMFLY_DEFERRED_SENTINEL
+    # Jones stays real at 16 crossings — a sentinel here would mean the
+    # bound was tightened without re-measuring.
+    @test d_large.jones_polynomial != HOMFLY_DEFERRED_SENTINEL
 end
 
 @testset "KT-2 ext: Jones polynomial distinguishes the test knots" begin
@@ -665,8 +676,16 @@ end
     @test t.conway_polynomial == "0:1,2:1"
 
     # Figure-eight ∇(z) = 1 - z² → "0:1,2:-1"
+    # KNOWN-BROKEN (upstream KnotTheory.jl#42): the computed value is
+    # "0:-1,2:1" = -(1 - z²). Conway is canonically normalised (∇(unknot)=1,
+    # so there is NO legitimate unit ambiguity) — the sign flip comes from
+    # the Alexander determinant's row/sign convention on mixed-sign
+    # diagrams, the same missing unit normalisation tracked in #42. The
+    # trefoil and cinquefoil (all-positive crossings) are unaffected.
+    # First caught here: this fixture suite (issue #32) merged behind the
+    # 6-hour CI hang and had never actually executed before.
     f = quandle_descriptor(figure_eight().pd)
-    @test f.conway_polynomial == "0:1,2:-1"
+    @test_broken f.conway_polynomial == "0:1,2:-1"
 
     # Cinquefoil ∇(z) = 1 + 3z² + z⁴ → "0:1,2:3,4:1"
     c = quandle_descriptor(cinquefoil().pd)
