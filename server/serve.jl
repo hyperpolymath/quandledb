@@ -1008,17 +1008,17 @@ function router(db::SkeinDB, sdb::SemanticIndexDB, static_dir::String,
 
     m_equiv = match(r"^/api/semantic-equivalents/(.+)$", path)
     !isnothing(m_equiv) &&
-        return handle_semantic_equivalents(db, sdb, m_equiv.captures[1])
+        return handle_semantic_equivalents(db, sdb, String(m_equiv.captures[1]))
 
     m_sem = match(r"^/api/semantic/(.+)$", path)
     !isnothing(m_sem) &&
-        return handle_semantic_detail(db, sdb, m_sem.captures[1])
+        return handle_semantic_detail(db, sdb, String(m_sem.captures[1]))
 
     path == "/api/explain" && return handle_explain(db, sdb, params)
 
     m_knot = match(r"^/api/knots/(.+)$", path)
     !isnothing(m_knot) &&
-        return handle_knot_detail(db, sdb, m_knot.captures[1])
+        return handle_knot_detail(db, sdb, String(m_knot.captures[1]))
 
     serve_static(static_dir, path)
 end
@@ -1047,7 +1047,7 @@ function main()
 
     # ── Open databases ────────────────────────────────────────────────────────
     db = SkeinDB(config.dbpath; readonly = true)
-    total = count_knots(db)
+    total = Skein.count_knots(db)
 
     semantic_path = abspath(config.semantic_index)
     mkpath(dirname(semantic_path))
