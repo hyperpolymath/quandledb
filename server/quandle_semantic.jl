@@ -10,6 +10,8 @@ export QuandleRelation, QuandlePresentation
 export extract_presentation, canonicalize_presentation, canonical_presentation_blob
 export quandle_descriptor
 export IMAGE_HISTOGRAM_MAX_G
+export ALEXANDER_MAX_CROSSINGS, CONWAY_MAX_CROSSINGS, JONES_MAX_CROSSINGS
+export HOMFLY_MAX_CROSSINGS, HOMFLY_DEFERRED_SENTINEL
 
 """
     QuandleRelation
@@ -467,6 +469,18 @@ end
 const HOMFLY_MAX_CROSSINGS = 15
 const HOMFLY_DEFERRED_SENTINEL = "deferred:too_many_crossings"
 
+# KnotTheory's alexander_polynomial computes its polynomial-matrix minor
+# determinant by naive cofactor expansion — O(n!) in the minor size, which
+# tracks the crossing count. Measured on (2,n)-torus closures (s1^n, the
+# worst case: no arc merging): n=12 → 12s, n=13 → 106s, n=16 → 6h+ (this
+# hung CI to GitHub's job kill). conway_polynomial CALLS alexander_polynomial
+# internally, so it inherits the same bound. jones_polynomial goes through
+# the Kauffman bracket instead, which KnotTheory itself hard-limits at 20
+# crossings by THROWING — we convert that throw into the same sentinel.
+const ALEXANDER_MAX_CROSSINGS = 12
+const CONWAY_MAX_CROSSINGS = ALEXANDER_MAX_CROSSINGS
+const JONES_MAX_CROSSINGS = 20
+
 """
     _safe_homfly_serialised(pd::KnotTheory.PlanarDiagram) -> String
 
@@ -478,6 +492,42 @@ function _safe_homfly_serialised(pd::KnotTheory.PlanarDiagram)::String
     length(pd.crossings) > HOMFLY_MAX_CROSSINGS && return HOMFLY_DEFERRED_SENTINEL
     poly = KnotTheory.homfly_polynomial(pd)
     _serialise_int_poly_2var(poly)
+end
+
+"""
+    _safe_alexander_serialised(pd::KnotTheory.PlanarDiagram) -> String
+
+Alexander polynomial, guarded by `ALEXANDER_MAX_CROSSINGS` (the upstream
+determinant is O(n!) cofactor expansion). Returns the deferred sentinel
+above the bound.
+"""
+function _safe_alexander_serialised(pd::KnotTheory.PlanarDiagram)::String
+    length(pd.crossings) > ALEXANDER_MAX_CROSSINGS && return HOMFLY_DEFERRED_SENTINEL
+    _serialise_int_poly(KnotTheory.alexander_polynomial(pd))
+end
+
+"""
+    _safe_conway_serialised(pd::KnotTheory.PlanarDiagram) -> String
+
+Conway polynomial, guarded by `CONWAY_MAX_CROSSINGS` (upstream it is
+computed FROM the Alexander polynomial, so it shares the O(n!) cost).
+Returns the deferred sentinel above the bound.
+"""
+function _safe_conway_serialised(pd::KnotTheory.PlanarDiagram)::String
+    length(pd.crossings) > CONWAY_MAX_CROSSINGS && return HOMFLY_DEFERRED_SENTINEL
+    _serialise_int_poly(KnotTheory.conway_polynomial(pd))
+end
+
+"""
+    _safe_jones_serialised(pd::KnotTheory.PlanarDiagram) -> String
+
+Jones polynomial, guarded by `JONES_MAX_CROSSINGS` (KnotTheory's Kauffman
+bracket throws above 20 crossings; we return the deferred sentinel
+instead of propagating the throw).
+"""
+function _safe_jones_serialised(pd::KnotTheory.PlanarDiagram)::String
+    length(pd.crossings) > JONES_MAX_CROSSINGS && return HOMFLY_DEFERRED_SENTINEL
+    _serialise_int_poly(KnotTheory.jones_polynomial(pd))
 end
 
 """
@@ -504,14 +554,15 @@ function quandle_descriptor(pd::KnotTheory.PlanarDiagram)
     image_hist_3_str = join(image_hist_3, ",")
     image_hist_5_str = join(image_hist_5, ",")
 
-    # KT-2: Alexander polynomial via KnotTheory.jl, same serialisation as Skein.jl
-    alexander_poly = KnotTheory.alexander_polynomial(pd)
-    alexander_str = _serialise_int_poly(alexander_poly)
+    # KT-2: Alexander polynomial via KnotTheory.jl, same serialisation as
+    # Skein.jl. Guarded: the upstream determinant is O(n!) in crossing count.
+    alexander_str = _safe_alexander_serialised(pd)
 
     # KT-2 extension: Jones, Conway (both Laurent in one variable),
-    # and HOMFLY-PT (two-variable, guarded at HOMFLY_MAX_CROSSINGS).
-    jones_str = _serialise_int_poly(KnotTheory.jones_polynomial(pd))
-    conway_str = _serialise_int_poly(KnotTheory.conway_polynomial(pd))
+    # and HOMFLY-PT (two-variable). All guarded — see the *_MAX_CROSSINGS
+    # constants for the measured cost model behind each bound.
+    jones_str = _safe_jones_serialised(pd)
+    conway_str = _safe_conway_serialised(pd)
     homfly_str = _safe_homfly_serialised(pd)
 
     key = string(
