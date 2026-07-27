@@ -31,12 +31,12 @@ defmodule QuandleDBNifLiveIntegrationTest do
       assert nif_payload[:quandle_key] == api_payload["quandle_key"]
       assert nif_payload[:crossing_number] == api_payload["crossing_number"]
       assert nif_payload[:writhe] == api_payload["writhe"]
-      assert nif_payload[:determinant] == api_payload["determinant"]
-      assert nif_payload[:signature] == api_payload["signature"]
-      assert nif_payload[:quandle_generator_count] == api_payload["quandle_generator_count"]
-      assert nif_payload[:quandle_relation_count] == api_payload["quandle_relation_count"]
-      assert nif_payload[:colouring_count_3] == api_payload["colouring_count_3"]
-      assert nif_payload[:colouring_count_5] == api_payload["colouring_count_5"]
+      assert nif_payload[:determinant] == (if api_payload["determinant"] == :null, do: nil, else: api_payload["determinant"])
+      assert nif_payload[:signature] == (if api_payload["signature"] == :null, do: nil, else: api_payload["signature"])
+      assert nif_payload[:quandle_generator_count] == (if api_payload["quandle_generator_count"] == :null, do: nil, else: api_payload["quandle_generator_count"])
+      assert nif_payload[:quandle_relation_count] == (if api_payload["quandle_relation_count"] == :null, do: nil, else: api_payload["quandle_relation_count"])
+      assert nif_payload[:colouring_count_3] == (if api_payload["colouring_count_3"] == :null, do: nil, else: api_payload["colouring_count_3"])
+      assert nif_payload[:colouring_count_5] == (if api_payload["colouring_count_5"] == :null, do: nil, else: api_payload["colouring_count_5"])
     end
 
     test "semantic_equivalents matches API for configured knot" do

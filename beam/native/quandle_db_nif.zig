@@ -83,7 +83,7 @@ fn inspect_input_binary(env: ?*c.ErlNifEnv, term: c.ERL_NIF_TERM) ?[]const u8 {
 }
 
 fn is_safe_name(name: []const u8) bool {
-    if (name.len == 0) return false;
+    if (name.len == 0 or name.len > 255) return false;
     for (name) |ch| {
         if (std.ascii.isAlphanumeric(ch)) continue;
         if (ch == '_' or ch == '-' or ch == '.') continue;
@@ -109,20 +109,21 @@ fn nif_reason_from_semantic_error(err: semantic.SemanticError) [*:0]const u8 {
 }
 
 fn is_stub_mode() bool {
-    const mode = std.process.getEnvVarOwned(c_allocator, "QDB_NIF_MODE") catch |err| switch (err) {
-        error.EnvironmentVariableNotFound => return true,
-        else => return true,
-    };
-    defer c_allocator.free(mode);
-    return !std.ascii.eqlIgnoreCase(mode, "live");
+    const mode = std.c.getenv("QDB_NIF_MODE");
+    if (mode == null) {
+        std.debug.print("DEBUG: QDB_NIF_MODE is null\n", .{});
+        return true;
+    }
+    const mode_slice = std.mem.span(mode.?);
+    std.debug.print("DEBUG: QDB_NIF_MODE is '{s}'\n", .{mode_slice});
+    if (mode_slice.len == 0) return true;
+    return !std.ascii.eqlIgnoreCase(mode_slice, "live");
 }
 
 fn get_base_url() HostCallError![]u8 {
-    return std.process.getEnvVarOwned(c_allocator, "QDB_API_BASE_URL") catch |err| switch (err) {
-        error.EnvironmentVariableNotFound => c_allocator.dupe(u8, "http://127.0.0.1:8080") catch error.OutOfMemory,
-        error.OutOfMemory => error.OutOfMemory,
-        else => error.InternalError,
-    };
+    const url_c = std.c.getenv("QDB_API_BASE_URL");
+    const url = if (url_c != null) std.mem.span(url_c.?) else "http://127.0.0.1:8080";
+    return c_allocator.dupe(u8, url) catch error.OutOfMemory;
 }
 
 fn build_endpoint_url(path_prefix: []const u8, name: []const u8) HostCallError![]u8 {
@@ -131,12 +132,18 @@ fn build_endpoint_url(path_prefix: []const u8, name: []const u8) HostCallError![
     const base_url = try get_base_url();
     defer c_allocator.free(base_url);
 
-    const trimmed = std.mem.trimRight(u8, base_url, "/");
+    const trimmed = std.mem.trimEnd(u8, base_url, "/");
     return std.fmt.allocPrint(c_allocator, "{s}{s}{s}", .{ trimmed, path_prefix, name }) catch error.OutOfMemory;
 }
 
 fn fetch_json(url: []const u8, body: *std.Io.Writer.Allocating) HostCallError!void {
-    var client: std.http.Client = .{ .allocator = c_allocator };
+    var threaded_io = std.Io.Threaded.init(c_allocator, .{});
+    defer threaded_io.deinit();
+
+    var client: std.http.Client = .{
+        .allocator = c_allocator,
+        .io = threaded_io.io(),
+    };
     defer client.deinit();
 
     const result = client.fetch(.{
@@ -300,6 +307,8 @@ pub export fn qdb_semantic_lookup(name_ptr: [*]const u8, name_len: usize, out_de
 
     const url = build_endpoint_url("/api/semantic/", name) catch |err| return status_from_host_error(err);
     defer c_allocator.free(url);
+
+    std.debug.print("DEBUG NIF FETCH: {s}\n", .{url});
 
     fetch_json(url, &body) catch |err| return status_from_host_error(err);
 
