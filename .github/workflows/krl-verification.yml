@@ -34,9 +34,13 @@ jobs:
   krl-tests:
     name: KRL lexer / parser / SQL tests (Julia)
     runs-on: ubuntu-latest
+    # A hang here previously burned GitHub's full 6-hour job limit (unguarded
+    # O(n!) polynomial call). Fail fast instead: the whole suite completes in
+    # well under an hour when healthy.
+    timeout-minutes: 90
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
 
       # Julia >= 1.11 is required: server/Project.toml uses a [sources] table
       # (path-resolved sibling deps), which Pkg 1.10 silently ignores — the
@@ -68,19 +72,19 @@ jobs:
       # checkout ($GITHUB_WORKSPACE/../../<name>.jl). actions/checkout cannot
       # write outside the workspace, so check out under deps/ and symlink.
       - name: Checkout KnotTheory.jl
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
         with:
           repository: hyperpolymath/KnotTheory.jl
           path: deps/KnotTheory.jl
 
       - name: Checkout Skein.jl
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
         with:
           repository: hyperpolymath/Skein.jl
           path: deps/Skein.jl
 
       - name: Checkout AcceleratorGate.jl
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
         with:
           repository: hyperpolymath/AcceleratorGate.jl
           path: deps/AcceleratorGate.jl
@@ -112,9 +116,10 @@ jobs:
   agda-proofs:
     name: Agda proofs (--safe)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
 
       - name: Install Agda + standard library
         run: |
@@ -150,9 +155,10 @@ jobs:
   tlaplus-model-check:
     name: TLA+ model check (TLC)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
 
       # The ubuntu-latest image ships a Temurin JDK; TLC needs Java 11+.
       - name: Fetch TLA+ tools (pinned release, checksum-verified)
