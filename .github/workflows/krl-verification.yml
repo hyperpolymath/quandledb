@@ -66,6 +66,7 @@ jobs:
           julia --color=yes server/krl/test/parser_test.jl
           julia --color=yes server/krl/test/sql_test.jl
           julia --color=yes server/krl/test/seam_test.jl
+          julia --color=yes server/krl/test/explain_test.jl
 
       # server/Project.toml [sources] resolves KnotTheory/Skein/AcceleratorGate
       # at server/../../<name>.jl — i.e. one directory above the repo checkout
