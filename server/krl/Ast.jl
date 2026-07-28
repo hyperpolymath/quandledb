@@ -36,7 +36,7 @@ export KRLNode, KRLStatement, KRLSource, KRLPipeStage, KRLReturnItem,
        SortOrder, SortAsc, SortDesc,
        EdgeDir, EdgeForward, EdgeBackward, EdgeUndirected,
        # program + statements
-       KRLProgram, KRLQueryStmt, KRLLetStmt, KRLRuleDef, KRLAxiomDef,
+       KRLProgram, KRLQueryStmt, KRLExplainStmt, KRLLetStmt, KRLRuleDef, KRLAxiomDef,
        # query + sources
        KRLQuery, KRLSourceKnots, KRLSourceDiagrams, KRLSourceInvariants,
        KRLSourceNamed, KRLSourceSubquery,
@@ -118,6 +118,20 @@ end
 A pipeline query used as a statement (the primary use case in QuandleDB).
 """
 struct KRLQueryStmt <: KRLStatement
+    query::KRLNode   # KRLQuery
+    line::Int
+    col::Int
+end
+
+"""
+    KRLExplainStmt(query, line, col)
+
+`explain from … | …` — DB-6 Phase A. Returns the query PLAN rather than
+running the query. Deliberately a distinct statement type rather than a flag
+on `KRLQueryStmt`, so that every existing consumer of `KRLQueryStmt`
+continues to mean "this query will actually execute".
+"""
+struct KRLExplainStmt <: KRLStatement
     query::KRLNode   # KRLQuery
     line::Int
     col::Int

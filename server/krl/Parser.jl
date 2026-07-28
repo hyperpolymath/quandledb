@@ -189,6 +189,17 @@ function _parse_statement(ps::ParserState)::KRLStatement
         return _parse_let_stmt(ps)
     end
 
+    # explain from … | …   (DB-6 Phase A: plan, do not execute)
+    if _kw(ps, "explain")
+        _advance!(ps)
+        et = _peek(ps)
+        _kw(ps, "from") || throw(KRLParseError(
+            "expected `from` after `explain`, got $(et.kind)($(repr(et.value)))",
+            et.line, et.col))
+        q = _parse_query(ps)
+        return KRLExplainStmt(q, t.line, t.col)
+    end
+
     # from … | … (pipeline query)
     if _kw(ps, "from")
         q = _parse_query(ps)
@@ -197,7 +208,7 @@ function _parse_statement(ps::ParserState)::KRLStatement
 
     t = _peek(ps)
     throw(KRLParseError(
-        "expected statement (from/let/rule/axiom), got $(t.kind)($(repr(t.value)))",
+        "expected statement (from/explain/let/rule/axiom), got $(t.kind)($(repr(t.value)))",
         t.line, t.col))
 end
 
