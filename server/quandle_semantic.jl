@@ -469,15 +469,19 @@ end
 const HOMFLY_MAX_CROSSINGS = 15
 const HOMFLY_DEFERRED_SENTINEL = "deferred:too_many_crossings"
 
-# KnotTheory's alexander_polynomial computes its polynomial-matrix minor
-# determinant by naive cofactor expansion — O(n!) in the minor size, which
-# tracks the crossing count. Measured on (2,n)-torus closures (s1^n, the
-# worst case: no arc merging): n=12 → 12s, n=13 → 106s, n=16 → 6h+ (this
-# hung CI to GitHub's job kill). conway_polynomial CALLS alexander_polynomial
-# internally, so it inherits the same bound. jones_polynomial goes through
-# the Kauffman bracket instead, which KnotTheory itself hard-limits at 20
-# crossings by THROWING — we convert that throw into the same sentinel.
-const ALEXANDER_MAX_CROSSINGS = 12
+# alexander_polynomial's determinant is now fraction-free Bareiss
+# elimination — O(n^3) polynomial operations (KnotTheory.jl#46/#48).
+# Re-measured on (2,n)-torus closures (s1^n, the worst case: no arc
+# merging): n=40 → 0.07s, n=100 → 0.10s, n=140 → 0.61s. The previous
+# bound of 12 was calibrated against the O(n!) cofactor expansion it
+# replaced (n=12 → 12s, n=13 → 106s, n=16 → 6h+ and a CI job killed at
+# GitHub's 6-hour limit), so it is now an order of magnitude too tight.
+# 128 keeps the worst case sub-second while covering every realistic
+# diagram. conway_polynomial calls alexander_polynomial, so it shares
+# the bound. jones_polynomial instead goes through the Kauffman bracket,
+# which is genuinely 2^n and which KnotTheory hard-limits at 20 crossings
+# by THROWING — we convert that throw into the same sentinel.
+const ALEXANDER_MAX_CROSSINGS = 128
 const CONWAY_MAX_CROSSINGS = ALEXANDER_MAX_CROSSINGS
 const JONES_MAX_CROSSINGS = 20
 
@@ -498,7 +502,7 @@ end
     _safe_alexander_serialised(pd::KnotTheory.PlanarDiagram) -> String
 
 Alexander polynomial, guarded by `ALEXANDER_MAX_CROSSINGS` (the upstream
-determinant is O(n!) cofactor expansion). Returns the deferred sentinel
+determinant is O(n^3) Bareiss elimination). Returns the deferred sentinel
 above the bound.
 """
 function _safe_alexander_serialised(pd::KnotTheory.PlanarDiagram)::String
@@ -510,7 +514,7 @@ end
     _safe_conway_serialised(pd::KnotTheory.PlanarDiagram) -> String
 
 Conway polynomial, guarded by `CONWAY_MAX_CROSSINGS` (upstream it is
-computed FROM the Alexander polynomial, so it shares the O(n!) cost).
+computed FROM the Alexander polynomial, so it shares that cost).
 Returns the deferred sentinel above the bound.
 """
 function _safe_conway_serialised(pd::KnotTheory.PlanarDiagram)::String
