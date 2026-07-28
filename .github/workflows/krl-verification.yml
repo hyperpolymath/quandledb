@@ -68,9 +68,12 @@ jobs:
           julia --color=yes server/krl/test/seam_test.jl
 
       # server/Project.toml [sources] resolves KnotTheory/Skein/AcceleratorGate
-      # at server/../../../<name>.jl — i.e. two directories above the repo
-      # checkout ($GITHUB_WORKSPACE/../../<name>.jl). actions/checkout cannot
-      # write outside the workspace, so check out under deps/ and symlink.
+      # at server/../../<name>.jl — i.e. one directory above the repo checkout
+      # ($GITHUB_WORKSPACE/../<name>.jl). actions/checkout cannot write outside
+      # the workspace, so check out under deps/ and symlink.
+      # NOTE: keep this in step with server/Project.toml — #83 moved [sources]
+      # from ../../../ to ../../ without updating the symlink here, which broke
+      # every instantiate with "expected package KnotTheory to exist at path".
       - name: Checkout KnotTheory.jl
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
         with:
@@ -93,8 +96,19 @@ jobs:
         run: |
           set -euo pipefail
           for p in KnotTheory.jl Skein.jl AcceleratorGate.jl; do
-            ln -sfn "$GITHUB_WORKSPACE/deps/$p" "$GITHUB_WORKSPACE/../../$p"
+            ln -sfn "$GITHUB_WORKSPACE/deps/$p" "$GITHUB_WORKSPACE/../$p"
           done
+          # Fail loudly here rather than inside Pkg.instantiate, whose error
+          # ("expected package ... to exist at path") names the path but not
+          # the cause.
+          julia --project=server -e '
+            using TOML
+            src = TOML.parsefile("server/Project.toml")["sources"]
+            for (name, spec) in src
+                path = normpath(joinpath("server", spec["path"]))
+                isdir(path) || error("[sources] $name -> $(spec["path"]) resolves to $path, which does not exist; the symlink step above is out of step with server/Project.toml")
+            end
+            println("PASS: all [sources] paths resolve")'
 
       - name: Instantiate server project
         run: julia --color=yes --project=server -e 'using Pkg; Pkg.instantiate()'
