@@ -5,56 +5,34 @@
 [metadata]
 project = "quandledb"
 version = "0.1.0"
-last-updated = "2026-07-28"
+last-updated = "2026-02-13"
 status = "active"
-session = "CI/correctness campaign — 2026-07-21 → 2026-07-28"
+session = "converted from scheme — 2026-04-11"
 
 [project-context]
 name = "Quandledb"
 purpose = """Knot-theory database application — the invariant/equivalence + semantic-identity face of the KRL stack (quandle fingerprints, equivalence/identity), as a read-only HTTP API + AffineScript UI wrapping the Skein.jl engine. Hosts the server-side KRL parser (server/krl/)."""
-completion-percentage = 55
+completion-percentage = 40
 
 [position]
-phase = "testing"   # design | implementation | testing | maintenance | archived
+phase = "initial"   # design | implementation | testing | maintenance | archived
 maturity = "experimental"  # experimental | alpha | beta | production | lts
 
 [route-to-mvp]
 milestones = [
-  { id = "M-CI", name = "Mathematical core gated in CI", status = "done", landed = "2026-07-21", note = "PR #72: quandle axioms, Reidemeister invariance, BR-5 fuzz, EXPLAIN and TLA+ model check all run on every push; both new gate types negative-tested (a real failure exits non-zero)." },
-  { id = "DB-6A-SQL", name = "DB-6 Phase A, SQL surface", status = "done", landed = "2026-06-01", note = "SQLite EXPLAIN QUERY PLAN over read-path SQL, mutation-guarded HTTP endpoint." },
-  { id = "DB-6A-KRL", name = "DB-6 Phase A, KRL surface", status = "done", landed = "2026-07-28", note = "PR #86: `explain` keyword, KRLExplainStmt, structured plan with indexed + selectivity. Selectivity is an honest stub; plan_is_costed() is false until DB-3." },
-  { id = "DB-3", name = "Secondary indexes + column histograms", status = "not-started", note = "Issue #33. Blocks DB-6 Phase B: real selectivity cannot exist without it." },
-  { id = "DB-6B", name = "DB-6 Phase B, cost-based reordering", status = "blocked", blocked-by = "DB-3", note = "Deliberately not attempted. Reordering against uniform stub estimates would be arbitrary while appearing principled." },
+  # No milestones recorded
 ]
 
 [blockers-and-issues]
 issues = [
-  { id = "GUIX-GATE", severity = "high", scope = "estate", summary = "governance / Guix primary / Nix fallback policy fails: repo has flake.nix and no Guix artefact. NOT locally fixable in good faith — the gate is presence-only (checks a filename exists, never reads it), so a stub guix.scm would buy green with a lie. Measured estate-wide: 163 stub / 43 placeholder / 40 wrong-identity guix.scm files all pass today. Recommendation is to fix the GATE first.", evidence = "dev-notes/guix-policy-gate-advice-2026-07-28.md" },
-  { id = "RULESET-ADMIN", severity = "medium", scope = "repo", summary = "Every merge to main requires --admin: the ruleset carries code_coverage minimum 95 on a repo with no coverage tooling (unsatisfiable), a code_scanning requirement on Scorecard (which never runs on a PR head, so the context is phantom), and copilot_code_review. Routine --admin bypass is how a genuinely failing gate stops being noticed.", remedy = "dev-notes/quandledb-ruleset-fix-2026-07-27.md + quandledb-ruleset-fixed.json (one gh api -X PUT)" },
-  { id = "DOC-DRIFT", severity = "low", scope = "repo", summary = "READINESS.md (grade D, assessed 2026-04-05) cites src/api/*.v — no .v files and no src/api/ exist; it also lists EXPLAINME / TEST-NEEDS / PROOF-NEEDS as missing, all of which now exist. ARCHITECTURE.md is scaffold boilerplate describing directories this repo does not have.", tracked = "issue #74" },
-  { id = "UNGATED-TIERS", severity = "medium", scope = "repo", summary = "Idris2 (src/abi), Zig (src/ffi) and AffineScript (frontend) have no CI gate at all. The Julia, BEAM, Agda and TLA+ tiers do.", tracked = "issue #73 covers the BEAM half, now closed" },
+  # No blockers recorded
 ]
 
 [critical-next-actions]
 actions = [
-  { order = 1, action = "Merge open PRs in order: #85 (unblocks red main) then #86 (DB-6 KRL surface).", owner = "human", note = "Both require --admin until RULESET-ADMIN is fixed." },
-  { order = 2, action = "Apply the ruleset fix so merges stop requiring --admin.", owner = "human", command = "gh api -X PUT repos/hyperpolymath/quandledb/rulesets/18110611 --input dev-notes/quandledb-ruleset-fixed.json" },
-  { order = 3, action = "Decide the Guix gate question at estate level before touching this repo's packaging.", owner = "human", note = "Writing a stub guix.scm here would pass CI and be a lie. See GUIX-GATE." },
-  { order = 4, action = "DB-3 (issue #33): secondary indexes + column histograms.", owner = "either", note = "The single highest-value next build: it unblocks DB-6 Phase B and turns plan_is_costed() true." },
-  { order = 5, action = "Re-assess READINESS.md against the tree as it now stands.", owner = "either", tracked = "issue #74" },
+  # No actions recorded
 ]
 
 [maintenance-status]
-last-run-utc = "2026-07-28T19:45:00Z"
-last-result = "warn"  # unknown | pass | warn | fail
-# warn, not pass: every gate the repo owns is green (KRL Verification incl.
-# the full Julia suite, Agda --safe, TLC, QD-12, CodeQL, Hypatia, gitleaks).
-# The single red check is the estate-wide Guix policy gate — see GUIX-GATE
-# above. It is not green-able here in good faith, so it is reported as a warn
-# rather than suppressed.
-zero-known-broken-markers = true
-# As of 2026-07-28 the test suites carry NO @test_broken markers. The last one
-# (BR-5 quandle_key crossing-order invariance, 11/200 mismatches) cleared when
-# KnotTheory.jl#52 fixed link normalisation. Every marker this campaign added
-# was removed by the upstream fix it was tracking, which is the mechanism
-# working as intended: a marker that survives is a lie waiting to be told.
+last-run-utc = "2026-02-13T00:00:00Z"
+last-result = "unknown"  # unknown | pass | warn | fail
