@@ -28,6 +28,7 @@ include("Lexer.jl")
 include("Ast.jl")
 include("Parser.jl")
 include("SqlFrontend.jl")
+include("ExplainPlan.jl")
 include("Evaluator.jl")
 
 end # module KRL

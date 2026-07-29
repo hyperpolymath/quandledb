@@ -62,6 +62,8 @@ const TokenKind = Symbol
 # ─────────────────────────────────────────────────────────────────────────────
 
 const KRL_KEYWORDS = Set([
+    # query-level modifiers
+    "explain",
     # pipeline stages
     "from", "filter", "sort", "take", "skip", "return",
     "group_by", "aggregate",
