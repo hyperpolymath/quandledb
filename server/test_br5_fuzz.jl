@@ -120,23 +120,13 @@ end
 
 @testset "BR-5: crossing-order invariance on random braid words" begin
     rng = MersenneTwister(BR5_SEED + 1)
-    # KNOWN-BROKEN (upstream KnotTheory.jl#51): the polynomial segments of
-    # quandle_key are crossing-order sensitive on multi-component LINKS.
-    # Measured over this 200-trial corpus, splitting by Delta(1):
-    #     links (Delta(1)=0):  11 mismatch, 87 agree
-    #     knots (Delta(1)=±1):  0 mismatch, 102 agree
-    # Knots became fully order-invariant when KnotTheory#48 landed the
-    # Delta(1)=+1 normalisation; that fix cannot apply to links, where
-    # Delta(1)=0 and the code falls back to an order-sensitive rule. Worse,
-    # conway_polynomial reconstructs from an assumed symmetry about
-    # exponent 0, which no link satisfies (even span ⟹ half-integer
-    # centre), so it returns genuinely DIFFERENT polynomials for the same
-    # link (e.g. 1 + z² vs 1) — not merely a different unit.
-    # NOTE: this count did NOT move when #48 merged. The earlier
-    # attribution of these mismatches to the alexander/conway sign
-    # convention was wrong; the sign fix was real but orthogonal.
-    # The layers this repo owns (presentation_hash, colouring counts) are
-    # asserted hard below and hold on every trial.
+    # Crossing-order invariance of quandle_key, including its polynomial
+    # segments. This was @test_broken at 11/200: every mismatch was a
+    # multi-component LINK (knots were already invariant at 0/102). Upstream
+    # KnotTheory.jl#51/#52 fixed both causes — an exponent window that could
+    # not be canonicalised for odd spans, and a Conway expansion that emitted
+    # even powers of z for links that require odd ones. Measured after that
+    # merge: 0 mismatches over 200 trials, links and knots alike.
     quandle_key_mismatches = 0
     for trial in 1:BR5_TRIALS
         nstrands = rand(rng, 3:4)
@@ -156,8 +146,8 @@ end
         end
     end
     quandle_key_mismatches > 0 &&
-        @info "BR-5 quandle_key order-sensitivity (known-broken)" quandle_key_mismatches BR5_TRIALS
-    @test_broken quandle_key_mismatches == 0
+        @info "BR-5 quandle_key order-sensitivity" quandle_key_mismatches BR5_TRIALS
+    @test quandle_key_mismatches == 0
 end
 
 # ---------------------------------------------------------------------------
