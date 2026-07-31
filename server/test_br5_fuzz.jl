@@ -120,13 +120,13 @@ end
 
 @testset "BR-5: crossing-order invariance on random braid words" begin
     rng = MersenneTwister(BR5_SEED + 1)
-    # KNOWN-BROKEN (upstream): the polynomial segments of quandle_key
-    # (alexander/conway/homfly from KnotTheory.jl) are crossing-order
-    # sensitive on some diagrams — the polynomials are not normalised to a
-    # canonical unit (±t^k), so 25/200 seeded trials disagree. The layers
-    # this repo owns (presentation_hash, colouring counts) are asserted
-    # hard below; the key mismatch count is tracked and marked broken so
-    # the marker must be removed once KnotTheory.jl normalises.
+    # Crossing-order invariance of quandle_key, including its polynomial
+    # segments. This was @test_broken at 11/200: every mismatch was a
+    # multi-component LINK (knots were already invariant at 0/102). Upstream
+    # KnotTheory.jl#51/#52 fixed both causes — an exponent window that could
+    # not be canonicalised for odd spans, and a Conway expansion that emitted
+    # even powers of z for links that require odd ones. Measured after that
+    # merge: 0 mismatches over 200 trials, links and knots alike.
     quandle_key_mismatches = 0
     for trial in 1:BR5_TRIALS
         nstrands = rand(rng, 3:4)
@@ -146,8 +146,8 @@ end
         end
     end
     quandle_key_mismatches > 0 &&
-        @info "BR-5 quandle_key order-sensitivity (known-broken)" quandle_key_mismatches BR5_TRIALS
-    @test_broken quandle_key_mismatches == 0
+        @info "BR-5 quandle_key order-sensitivity" quandle_key_mismatches BR5_TRIALS
+    @test quandle_key_mismatches == 0
 end
 
 # ---------------------------------------------------------------------------

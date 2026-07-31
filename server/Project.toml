@@ -10,9 +10,9 @@ SQLite = "0aa819cd-b072-5ff4-a722-6bc24af294d9"
 Skein = "e8a1f3d0-7c42-4e9a-b5d1-3a7f8c2e1d0b"
 
 [sources]
-AcceleratorGate = {path = "../../../AcceleratorGate.jl"}
-KnotTheory = {path = "../../../KnotTheory.jl"}
-Skein = {path = "../../../Skein.jl"}
+AcceleratorGate = {path = "../../AcceleratorGate.jl"}
+KnotTheory = {path = "../../KnotTheory.jl"}
+Skein = {path = "../../Skein.jl"}
 
 [compat]
 AcceleratorGate = "0.1"
