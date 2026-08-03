@@ -1016,8 +1016,6 @@ function router(db::SkeinDB, sdb::SemanticIndexDB, static_dir::String,
 
     path == "/api/explain" && return handle_explain(db, sdb, params)
 
-    path == "/api/explain" && return handle_explain(db, sdb, params)
-
     m_knot = match(r"^/api/knots/(.+)$", path)
     !isnothing(m_knot) &&
         return handle_knot_detail(db, sdb, String(m_knot.captures[1]))
