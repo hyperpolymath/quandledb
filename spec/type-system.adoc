@@ -1,16 +1,16 @@
-# SPDX-License-Identifier: CC-BY-SA-4.0
-# Copyright (c) 2026 Jonathan D.A. Jewell (hyperpolymath) <j.d.a.jewell@open.ac.uk>
+== SPDX-License-Identifier: CC-BY-SA-4.0
 
-# KRL Type System Specification
+== Copyright (c) 2026 Jonathan D.A. Jewell (hyperpolymath) j.d.a.jewell@open.ac.uk
 
-**Version:** 0.1.0
-**Date:** 2026-03-14
+== KRL Type System Specification
 
----
+*Version:* 0.1.0 *Date:* 2026-03-14
 
-## 1. Type Language
+'''''
 
-```
+=== 1. Type Language
+
+....
 τ ::= Int | Float | String | Bool                   scalars
     | Knot                                          knot record
     | Diagram                                       knot diagram
@@ -27,15 +27,15 @@
     | Provenance                                    provenance annotation
     | ResultSet[τ]                                  query result (ordered set of records)
     | α                                             type variable
-```
+....
 
----
+'''''
 
-## 2. Knot Record Type
+=== 2. Knot Record Type
 
-The `Knot` type is a fixed record:
+The `+Knot+` type is a fixed record:
 
-```
+....
 Knot = {
   name             : String,
   gauss_code       : GaussCode,
@@ -46,21 +46,21 @@ Knot = {
   jones_polynomial : Option[Polynomial],
   metadata         : Map[String, String]
 }
-```
+....
 
-Fields with `Option[τ]` may not be computed for all knots.
+Fields with `+Option[τ]+` may not be computed for all knots.
 
----
+'''''
 
-## 3. Equivalence Types (HoTT-Inspired)
+=== 3. Equivalence Types (HoTT-Inspired)
 
-### 3.1 Identity Type
+==== 3.1 Identity Type
 
-KRL's distinguishing feature is that equivalence queries return *types*, not
-booleans. The identity type `Equivalence[τ]` represents the space of paths
-between two values of type `τ`:
+KRL’s distinguishing feature is that equivalence queries return _types_,
+not booleans. The identity type `+Equivalence[τ]+` represents the space
+of paths between two values of type `+τ+`:
 
-```
+....
 Equivalence[Knot] = {
   source    : Knot,
   target    : Knot,
@@ -75,11 +75,11 @@ EquivalencePath = {
 }
 
 Confidence = Exact | Necessary | Sufficient | Heuristic
-```
+....
 
-### 3.2 Typing Rules for Equivalence
+==== 3.2 Typing Rules for Equivalence
 
-```
+....
     Γ ⊢ e₁ : Knot     Γ ⊢ e₂ : Knot
     ───────────────────────────────────────────────  [T-Equiv-Query]
     Γ ⊢ find_equivalent e₁ via [invs] : ResultSet[Equivalence[Knot]]
@@ -87,15 +87,15 @@ Confidence = Exact | Necessary | Sufficient | Heuristic
     Γ ⊢ e₁ : Diagram     Γ ⊢ e₂ : Diagram
     ──────────────────────────────────────────────────────  [T-Path-Query]
     Γ ⊢ find_path e₁ ~> e₂ via reidemeister : ResultSet[{path: List[Move], move_count: Int}]
-```
+....
 
----
+'''''
 
-## 4. Pipeline Type System
+=== 4. Pipeline Type System
 
 Each pipeline stage transforms the type of the result set:
 
-```
+....
     Γ ⊢ from knots : ResultSet[Knot]
 
     Γ ⊢ R : ResultSet[τ]     Γ, x: τ ⊢ expr : Bool
@@ -127,13 +127,13 @@ Each pipeline stage transforms the type of the result set:
     Γ, x: τ ⊢ agg(expr) : τ_agg
     ──────────────────────────────────────────────────────  [T-GroupAgg]
     Γ ⊢ R | group_by key | aggregate agg(expr) : ResultSet[{key: κ, agg: τ_agg}]
-```
+....
 
----
+'''''
 
-## 5. Expression Types
+=== 5. Expression Types
 
-```
+....
     ──────────────────  [T-IntLit]       ──────────────────  [T-FloatLit]
     Γ ⊢ n : Int                         Γ ⊢ f : Float
 
@@ -171,45 +171,49 @@ Each pipeline stage transforms the type of the result set:
     ∀i. Γ ⊢ eᵢ : Int
     ────────────────────────────────────────  [T-Gauss]
     Γ ⊢ gauss(e₁, …, eₙ) : GaussCode
-```
+....
 
----
+'''''
 
-## 6. Rule Types
+=== 6. Rule Types
 
-```
+....
     ∀param ∈ params: param : Knot
     ∀clause ∈ body: well-typed predicate or guard
     ────────────────────────────────────────────  [T-Rule]
     Γ ⊢ rule name(params) :- body : Rule
-```
+....
 
 Rules extend the e-graph. Type checking ensures all predicate arguments
-are of the correct type (e.g., `jones_polynomial(K, J)` requires `K: Knot`
-and `J: Polynomial`).
+are of the correct type (e.g., `+jones_polynomial(K, J)+` requires
+`+K: Knot+` and `+J: Polynomial+`).
 
----
+'''''
 
-## 7. Axiom Types
+=== 7. Axiom Types
 
-```
+....
     Γ, params ⊢ premise : Bool     Γ, params ⊢ conclusion : Bool
     ──────────────────────────────────────────────────────────────  [T-Axiom]
     Γ ⊢ axiom name : forall params, premise -> conclusion
-```
+....
 
 Axioms are trusted declarations used by the equivalence engine. They are
-not verified by the type checker but are type-checked for well-formedness.
+not verified by the type checker but are type-checked for
+well-formedness.
 
----
+'''''
 
-## 8. Properties
+=== 8. Properties
 
-1. **Pipeline type preservation:** Each stage produces a well-typed ResultSet.
-2. **Field access safety:** Projecting fields not in the record is a type error.
-3. **Equivalence type richness:** Equivalence results carry structured evidence,
-   not just boolean matches.
-4. **Provenance compositionality:** Combining results preserves provenance
-   (semiring structure).
-5. **Invariant type safety:** Each invariant function has a declared return type;
-   comparisons are type-checked.
+[arabic]
+. *Pipeline type preservation:* Each stage produces a well-typed
+ResultSet.
+. *Field access safety:* Projecting fields not in the record is a type
+error.
+. *Equivalence type richness:* Equivalence results carry structured
+evidence, not just boolean matches.
+. *Provenance compositionality:* Combining results preserves provenance
+(semiring structure).
+. *Invariant type safety:* Each invariant function has a declared return
+type; comparisons are type-checked.
