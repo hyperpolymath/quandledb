@@ -1,6 +1,0 @@
-{
-  "tasks": {
-    "check": "affinescript check src/ui/tea/quandle_gui.affine",
-    "build": "affinescript build src/ui/tea/quandle_gui.affine"
-  }
-}
