@@ -11,7 +11,7 @@ KRL.fetch_all(::CandidateData; kwargs...) = [
     Dict{String,Any}("name" => "a", "crossing_number" => 3),
     Dict{String,Any}("name" => "collision", "crossing_number" => 4)]
 KRL.equiv_buckets(::CandidateIndex, ::String) =
-    (strong=["a", "collision"], weak=["a", "collision"])
+    (strong=["a"], weak=["a", "collision"])
 
 function run_resolution(source)
     KRL.eval_krl_program(parse_krl(source),
@@ -23,6 +23,8 @@ end
     @test length(r.rows) == 2
     @test all(row -> row["_equiv_confidence"] == "ConfHeuristic", r.rows)
     @test any(w -> occursin("candidate", w), r.warnings)
+    @test !haskey(only(filter(row -> row["name"] == "collision", r.rows)), "_equiv_class")
+    @test only(filter(row -> row["name"] == "a", r.rows))["_equiv_class"] == ["a"]
     for level in ["exact", "sufficient", "necessary"]
         @test_throws KRL.KRLEvalError run_resolution(
             "from knots | find_equivalent \"a\" confidence >= " * level)
@@ -32,4 +34,10 @@ end
         "from knots | filter crossing_number > 100 | find_equivalent \"a\"")
     @test isempty(filtered.rows)
     @test_throws KRL.KRLParseError parse_krl("from knots | filter")
+    for source in ["rule is_small(k) :- crossing_number(k) <= 6",
+                   "axiom reflexivity : x == x -> true",
+                   "from knots | find_path \"a\" ~> \"a\" via reidemeister",
+                   "from knots | match (k)"]
+        @test_throws KRL.KRLParseError parse_krl(source)
+    end
 end

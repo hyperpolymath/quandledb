@@ -26,6 +26,8 @@ workflows:
         - 'actions/checkout@v7.0.1'
     '.github/workflows/scorecard.yml': []
     '.github/workflows/secret-scanner.yml': []
+    '.github/workflows/verification-image.yml':
+        - 'actions/checkout@v7.0.1'
 dependencies:
     'actions/checkout@v7.0.1':
         ref: 'v7.0.1'

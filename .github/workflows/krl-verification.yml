@@ -43,7 +43,7 @@ jobs:
     timeout-minutes: 90
     steps:
       - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7.0.1
 
       # Julia >= 1.11 is required: server/Project.toml uses a [sources] table
       # (path-resolved sibling deps), which Pkg 1.10 silently ignores — the
@@ -78,21 +78,21 @@ jobs:
       # from ../../../ to ../../ without updating the symlink here, which broke
       # every instantiate with "expected package KnotTheory to exist at path".
       - name: Checkout KnotTheory.jl
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7.0.1
         with:
           repository: hyperpolymath/KnotTheory.jl
           ref: 58a904d28212817053a14f73b415fd30a434857c
           path: deps/KnotTheory.jl
 
       - name: Checkout Skein.jl
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7.0.1
         with:
           repository: hyperpolymath/Skein.jl
           ref: 84bfe4134d8fca9e22114db1ec8410aa6066ba90
           path: deps/Skein.jl
 
       - name: Checkout AcceleratorGate.jl
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7.0.1
         with:
           repository: hyperpolymath/AcceleratorGate.jl
           ref: b24e9f00d89edd5a4a7940252799737024c32d41
@@ -137,7 +137,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7.0.1
 
       - name: Install Agda + standard library
         run: |
@@ -176,7 +176,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7.0.1
 
       # The ubuntu-latest image ships a Temurin JDK; TLC needs Java 11+.
       - name: Fetch TLA+ tools (pinned release, checksum-verified)

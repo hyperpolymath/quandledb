@@ -644,7 +644,11 @@ function _apply_find_equiv(rows, stage::KRLFindEquivStage, ctx)
             r = copy(row)
             r["_equiv_target"]     = target_name
             r["_equiv_confidence"] = string(conf)
-            r["_equiv_class"]      = buckets.strong
+            if row_name in buckets.strong
+                r["_equiv_class"] = copy(buckets.strong)
+            else
+                pop!(r, "_equiv_class", nothing)
+            end
             push!(result, r)
         end
     end

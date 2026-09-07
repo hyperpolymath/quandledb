@@ -134,6 +134,8 @@ The construction/resolution draft and the running retrieval/candidate fragment
 are scoped separately by `krl/spec/SURFACES.adoc`. They are not interchangeable
 grammars. The KRL repository's executable conformance corpus accepts the fragment
 and rejects draft construction syntax. Full parser/grammar equivalence is open.
+The parser also rejects reserved `rule`, `axiom`, `find_path` and `match` forms;
+their draft productions are not reachable from the executable grammar.
 There is no second KRL compiler targeting Tangle to use as a reference oracle.
 
 `server/krl/test/resolution++_++boundary++_++test.jl` also exercises the assurance boundary:

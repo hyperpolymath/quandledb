@@ -369,9 +369,8 @@ end
         @test all(row -> haskey(row, "name"), r.rows)
     end
 
-    @testset "find_path: returns warning + rows (structural stub)" begin
-        r = eval_krl("""from knots | find_path "3_1" ~> "3_1" via reidemeister""")
-        @test any(w -> occursin("deferred", w), r.warnings)
+    @testset "find_path: refuses unavailable path witnesses" begin
+        @test_throws KRLParseError eval_krl("""from knots | find_path "3_1" ~> "3_1" via reidemeister""")
     end
 
 end

@@ -4,6 +4,8 @@
 (* This document does not specify all four KRL operation families. *)
 (* The separate construction/resolution draft is scoped by krl/spec/SURFACES.adoc. *)
 (* Syntactic acceptance of assurance levels does not certify those levels. *)
+(* rule, axiom, find_path and match are reserved drafts rejected by the parser. *)
+(* Their draft_* productions below are unreachable from program. *)
 (* Designed for QuandleDB v0.2.0 *)
 (* Version: 0.1.0 — 2026-03-14 *)
 (* @taxonomy: spec/grammar *)
@@ -101,9 +103,7 @@ rbrace = "}" ;
 program = { statement } ;
 
 statement = query
-          | rule_def
-          | let_binding
-          | axiom_def ;
+          | let_binding ;
 
 (* --- Pipeline Queries --- *)
 (*                                                                   *)
@@ -137,8 +137,6 @@ pipeline_stage = filter_stage
                | group_stage
                | aggregate_stage
                | equivalence_stage
-               | path_stage
-               | match_stage
                | with_stage
                | let_stage ;
 
@@ -213,7 +211,7 @@ confidence_level = "exact" | "necessary" | "sufficient" | "heuristic" ;
 (*   | find_path D ~> "3_1" via reidemeister                         *)
 (*   | return path, move_count                                       *)
 
-path_stage = "find_path" , expression , "~>" , knot_ref
+draft_path_stage = "find_path" , expression , "~>" , knot_ref
            , "via" , path_method ;
 
 path_method = "reidemeister"        (* sequence of Reidemeister moves *)
@@ -229,7 +227,7 @@ path_method = "reidemeister"        (* sequence of Reidemeister moves *)
 (*   | match (K1)-[:CONNECTED_SUM]->(K2)                             *)
 (*   | where K2.crossing_number < K1.crossing_number                 *)
 
-match_stage = "match" , graph_pattern ;
+draft_match_stage = "match" , graph_pattern ;
 
 graph_pattern = node_pattern , { edge_pattern , node_pattern } ;
 
@@ -316,7 +314,7 @@ signed_integer = [ "-" ] , integer_literal ;
 (*     jones_polynomial(K1, J), jones_polynomial(K2, J),             *)
 (*     K1 != K2                                                      *)
 
-rule_def = "rule" , identifier , "(" , param_list , ")" , ":-"
+draft_rule_def = "rule" , identifier , "(" , param_list , ")" , ":-"
          , rule_body ;
 
 param_list = identifier , { "," , identifier } ;
@@ -339,7 +337,7 @@ let_binding = "let" , identifier , [ ":" , type_annotation ] , "=" , expression 
 (*     forall K1 K2, reidemeister_equivalent(K1, K2) ->              *)
 (*     jones_polynomial(K1) == jones_polynomial(K2)                  *)
 
-axiom_def = "axiom" , identifier , ":" , axiom_body ;
+draft_axiom_def = "axiom" , identifier , ":" , axiom_body ;
 
 axiom_body = [ "forall" , param_list , "," ]
            , expression , "->" , expression ;
