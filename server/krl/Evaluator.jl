@@ -617,19 +617,24 @@ function _apply_find_equiv(rows, stage::KRLFindEquivStage, ctx)
     target_val = _eval_expr_safe(stage.target, Dict{String,Any}(), ctx)
     target_name = string(target_val)
 
+    # Buckets contain candidates, not checked resolution witnesses. A request
+    # for stronger assurance must not become its own evidence.
+    conf = something(stage.min_confidence, ConfHeuristic)
+    if conf != ConfHeuristic
+        throw(KRLEvalError("resolution assurance $(conf) requires a checked witness; index buckets provide heuristic candidates only",
+                           "find_equivalent", stage.line, stage.col))
+    end
+    push!(warns, "Index matches are heuristic candidates, not resolved equivalences")
+    if !isempty(stage.via_invs)
+        push!(warns, "Requested invariant list is not checked by the bucket provider")
+    end
     buckets = equiv_buckets(ctx.sem, target_name)
     if isnothing(buckets)
-        push!(warns, "find_equivalent: '$target_name' not in semantic index — no equivalents found")
-        return result, "0 equivalents (not indexed)", warns
+        push!(warns, "find_equivalent: '$target_name' not in semantic index — resolution unavailable")
+        return result, "resolution unavailable (not indexed)", warns
     end
 
-    # Select candidate set based on confidence
-    conf = something(stage.min_confidence, ConfHeuristic)
-    candidates = if conf == ConfExact || conf == ConfSufficient
-        buckets.strong
-    else
-        buckets.weak
-    end
+    candidates = buckets.weak
 
     # Attach equivalence metadata to each matching row
     candidate_names = Set(candidates)
@@ -644,18 +649,8 @@ function _apply_find_equiv(rows, stage::KRLFindEquivStage, ctx)
         end
     end
 
-    # If no rows were in the input (bare find_equivalent), emit one row per candidate
-    if isempty(rows)
-        for name in candidates
-            push!(result, Dict{String,Any}(
-                "name"                => name,
-                "_equiv_target"       => target_name,
-                "_equiv_confidence"   => string(conf),
-            ))
-        end
-    end
-
-    note = "$(length(result)) equivalents of '$target_name' (confidence >= $(conf))"
+    # Preserve the incoming selection, including an empty result.
+    note = "$(length(result)) heuristic candidates for '$target_name'"
     result, note, warns
 end
 

@@ -344,10 +344,9 @@ end
         @test "3_1" in names
     end
 
-    @testset "find_equivalent: with exact confidence uses strong bucket" begin
-        r = eval_krl("""from knots | find_equivalent "3_1" via [jones_polynomial] confidence >= exact""")
-        names = Set([row["name"] for row in r.rows])
-        @test !isempty(names)
+    @testset "find_equivalent: exact confidence needs a checked witness" begin
+        @test_throws KRLEvalError eval_krl(
+            """from knots | find_equivalent "3_1" via [jones_polynomial] confidence >= exact""")
     end
 
     @testset "find_equivalent: unknown target produces warning not crash" begin
