@@ -1,3 +1,4 @@
+# This workflow is managed by gh actions-lock.
 # SPDX-License-Identifier: MPL-2.0
 # This workflow is managed by gh actions-lock.
 # This workflow is managed by gh actions-lock.
@@ -34,7 +35,7 @@ permissions:
 
 jobs:
   krl-tests:
-    name: KRL lexer / parser / SQL tests (Julia)
+    name: KRL fragment and evaluator tests (Julia)
     runs-on: ubuntu-latest
     # A hang here previously burned GitHub's full 6-hour job limit (unguarded
     # O(n!) polynomial call). Fail fast instead: the whole suite completes in
@@ -42,17 +43,15 @@ jobs:
     timeout-minutes: 90
     steps:
       - name: Checkout
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Julia >= 1.11 is required: server/Project.toml uses a [sources] table
       # (path-resolved sibling deps), which Pkg 1.10 silently ignores — the
       # instantiate then fails with "expected package … to be registered".
       - name: Install Julia 1.12
-        run: |
-          set -euo pipefail
-          curl -fsSL https://install.julialang.org -o "$RUNNER_TEMP/juliaup-init.sh"
-          sh "$RUNNER_TEMP/juliaup-init.sh" --yes --default-channel 1.12
-          echo "$HOME/.juliaup/bin" >> "$GITHUB_PATH"
+        uses: julia-actions/setup-julia@4c0cb0fce8556fdb04a90347310e5db8b1f98fb9 # v2.7.0
+        with:
+          version: '1.12.6'
 
       - name: Julia version
         run: julia --version
@@ -79,21 +78,24 @@ jobs:
       # from ../../../ to ../../ without updating the symlink here, which broke
       # every instantiate with "expected package KnotTheory to exist at path".
       - name: Checkout KnotTheory.jl
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: hyperpolymath/KnotTheory.jl
+          ref: 58a904d28212817053a14f73b415fd30a434857c
           path: deps/KnotTheory.jl
 
       - name: Checkout Skein.jl
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: hyperpolymath/Skein.jl
+          ref: 84bfe4134d8fca9e22114db1ec8410aa6066ba90
           path: deps/Skein.jl
 
       - name: Checkout AcceleratorGate.jl
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: hyperpolymath/AcceleratorGate.jl
+          ref: b24e9f00d89edd5a4a7940252799737024c32d41
           path: deps/AcceleratorGate.jl
 
       - name: Link sibling packages where server/Project.toml expects them
@@ -118,10 +120,8 @@ jobs:
         run: julia --color=yes --project=server -e 'using Pkg; Pkg.instantiate()'
 
       # Each server suite is its own step so a failure names itself in the UI.
-      # Two known-broken upstream KnotTheory.jl defects are tracked inside the
-      # suites with @test_broken (r2_simplify arc re-splicing; polynomial
-      # order-sensitivity in quandle_key) — @test_broken flips to a hard error
-      # the moment the upstream fix lands, forcing the marker's removal.
+      # Previously broken upstream invariance cases are ordinary assertions
+      # against the pinned library revisions above.
       - name: Quandle axioms + Reidemeister invariance
         run: julia --color=yes --project=server server/test_quandle_axioms.jl
 
@@ -137,7 +137,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install Agda + standard library
         run: |
@@ -176,7 +176,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # The ubuntu-latest image ships a Temurin JDK; TLC needs Java 11+.
       - name: Fetch TLA+ tools (pinned release, checksum-verified)
