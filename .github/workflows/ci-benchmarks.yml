@@ -1,0 +1,175 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright (c) 2026 Jonathan D.A. Jewell (hyperpolymath) <j.d.a.jewell@open.ac.uk>
+#
+# Quandledb CI: Benchmarks and Tests
+#
+# Runs:
+# 1. Database-specific tests
+# 2. Central benchmarks from proven-tests-and-benchmarks repo
+# 3. GitGuardian secret scanning
+# 4. SonarQubeCloud quality analysis
+# 5. KRL verification tests
+
+name: CI - Tests & Benchmarks
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'beam/**'
+      - 'server/**'
+      - '.github/workflows/ci-benchmarks.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'beam/**'
+      - 'server/**'
+      - '.github/workflows/ci-benchmarks.yml'
+  workflow_dispatch:
+  schedule:
+    # Nightly benchmarks
+    - cron: '0 2 * * *'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ci-benchmarks-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BENCHMARKS_REPO: hyperpolymath/proven
+  BENCHMARKS_PATH: benchmarks/quandledb
+
+jobs:
+  # Job 1: Run Quandledb-specific tests
+  quandledb-tests:
+    name: Quandledb Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout Quandledb repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Erlang/OTP
+        uses: erlef/setup-beam@v1
+        with:
+          otp-version: '26'
+          elixir-version: '1.16'
+
+      - name: Set up Julia
+        uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.12'
+
+      - name: Install dependencies
+        run: |
+          cd beam
+          mix deps.get
+
+      - name: Run database tests
+        run: |
+          # TODO: Replace with actual Quandledb database tests
+          cd beam
+          mix test
+
+      - name: Run KRL verification tests
+        uses: ./.github/workflows/krl-verification.yml
+
+  # Job 2: Run central benchmarks
+  benchmarks:
+    name: Quandledb Benchmarks
+    needs: quandledb-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout Quandledb repo
+        uses: actions/checkout@v4
+
+      - name: Checkout proven benchmarks repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.BENCHMARKS_REPO }}
+          path: proven
+
+      - name: Install benchmark dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq bc
+
+      - name: Run Quandledb benchmarks
+        run: |
+          cd proven/benchmarks/quandledb
+          # Run all benchmarks and compare with baselines
+          ./run.sh --all
+        
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: quandledb-benchmark-results
+          path: proven/benchmarks/quandledb/results.json
+          retention-days: 30
+
+  # Job 3: GitGuardian secret scanning
+  gitguardian:
+    name: GitGuardian Secret Scan
+    needs: quandledb-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: GitGuardian scan
+        uses: GitGuardian/ggshield-action@v1
+        with:
+          args: scan repo .
+        env:
+          GITGUARDIAN_API_KEY: ${{ secrets.GITGUARDIAN_API_KEY }}
+
+  # Job 4: SonarQubeCloud quality analysis
+  sonarqube:
+    name: SonarQubeCloud Analysis
+    needs: quandledb-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: SonarQube scan
+        uses: SonarSource/sonarqube-scan-action@v2
+        with:
+          args: >-
+            -Dsonar.projectKey=quandledb
+            -Dsonar.organization=hyperpolymath
+            -Dsonar.sources=beam,server
+            -Dsonar.language=elixir,julia
+        env:
+          SONAR_TOKEN: ${{ secrets.SONARQUBE_TOKEN }}
+
+  # Job 5: CodeQL analysis (existing)
+  codeql:
+    name: CodeQL Analysis
+    needs: quandledb-tests
+    uses: ./.github/workflows/codeql.yml
+    secrets: inherit
+
+  # Job 6: Dependabot (existing)
+  dependabot:
+    name: Dependabot
+    needs: quandledb-tests
+    uses: ./.github/workflows/dependabot-automerge.yml
+    secrets: inherit
