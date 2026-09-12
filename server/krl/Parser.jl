@@ -178,11 +178,9 @@ end
 function _parse_statement(ps::ParserState)::KRLStatement
     t = _peek(ps)
 
-    # rule <name>(params) :- body
-    _kw(ps, "rule")  && return _parse_rule_def(ps)
-
-    # axiom <name> : …
-    _kw(ps, "axiom") && return _parse_axiom_def(ps)
+    if _kw(ps, "rule") || _kw(ps, "axiom")
+        throw(KRLParseError("$(t.value) is draft syntax, outside the executable fragment", t.line, t.col))
+    end
 
     # let <name> [: type] = expr     (top-level binding, no pipeline pipe follows)
     if _kw(ps, "let")
@@ -208,7 +206,7 @@ function _parse_statement(ps::ParserState)::KRLStatement
 
     t = _peek(ps)
     throw(KRLParseError(
-        "expected statement (from/explain/let/rule/axiom), got $(t.kind)($(repr(t.value)))",
+        "expected statement (from/explain/let), got $(t.kind)($(repr(t.value)))",
         t.line, t.col))
 end
 
@@ -343,8 +341,9 @@ function _parse_pipeline_stage(ps::ParserState)::KRLPipeStage
     t.value == "group_by"        && return _parse_group_by_stage(ps)
     t.value == "aggregate"       && return _parse_aggregate_stage(ps)
     t.value == "find_equivalent" && return _parse_find_equiv_stage(ps)
-    t.value == "find_path"       && return _parse_find_path_stage(ps)
-    t.value == "match"           && return _parse_match_stage(ps)
+    if t.value in ("find_path", "match")
+        throw(KRLParseError("$(t.value) has no implemented witness or matching engine", t.line, t.col))
+    end
     t.value == "let"             && return _parse_let_stage(ps)
     t.value == "with"            && return _parse_with_stage(ps)
 
