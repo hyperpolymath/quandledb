@@ -162,10 +162,9 @@ stage(q, i) = q.stages[i]
         end
     end
 
-    @testset "find_path stage" begin
-        q = one_query("""from diagrams | find_path "3_1" ~> "3_1" via reidemeister""")
-        s = stage(q, 1)
-        @test s isa KRLFindPathStage
+    @testset "unimplemented path and match stages are rejected" begin
+        @test_throws KRLParseError one_query("""from diagrams | find_path "3_1" ~> "3_1" via reidemeister""")
+        @test_throws KRLParseError one_query("from knots | match (k)")
     end
 
     @testset "let stage" begin
@@ -207,19 +206,11 @@ stage(q, i) = q.stages[i]
     end
 
     @testset "rule definition" begin
-        prog = parse_krl("rule is_small(k) :- crossing_number(k) <= 6")
-        @test prog.statements[1] isa KRLRuleDef
-        @test prog.statements[1].name == "is_small"
-        @test prog.statements[1].params == ["k"]
-        @test length(prog.statements[1].body_clauses) == 1
+        @test_throws KRLParseError parse_krl("rule is_small(k) :- crossing_number(k) <= 6")
     end
 
     @testset "axiom definition" begin
-        prog = parse_krl("axiom reflexivity : x == x -> true")
-        stmt = prog.statements[1]
-        @test stmt isa KRLAxiomDef
-        @test stmt.name == "reflexivity"
-        @test isempty(stmt.params)
+        @test_throws KRLParseError parse_krl("axiom reflexivity : x == x -> true")
     end
 
     # Regression — bare `=` is accepted surface syntax for let-bindings and
