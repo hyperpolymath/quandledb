@@ -101,10 +101,12 @@ quandledb/
 
 ### Branch Naming
 
-docs/short-description # Documentation (P3) test/what-added # Test
-additions (P3) feat/short-description # New features (P2)
-fix/issue-number-description # Bug fixes (P2) refactor/what-changed #
-Code improvements (P2) security/what-fixed # Security fixes (P1-2)
+docs/short-description # Documentation (P3)
+test/what-added # Test additions (P3)
+feat/short-description # New features (P2)
+fix/issue-number-description # Bug fixes (P2)
+refactor/what-changed # Code improvements (P2)
+security/what-fixed # Security fixes (P1-2)
 
 
 ### Commit Messages
