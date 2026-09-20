@@ -3,6 +3,13 @@
 # Docs: https://gh.io/actions-lockfile
 version: 'v0.0.2'
 workflows:
+    '.github/workflows/ci-benchmarks.yml':
+        - 'actions/checkout@v7.0.1'
+        - 'actions/upload-artifact@v7.0.1'
+        - 'erlef/setup-beam@v1.24.1'
+        - 'gitguardian/ggshield-action@v1.54.0'
+        - 'julia-actions/setup-julia@v3.0.2'
+        - 'sonarsource/sonarqube-scan-action@v8.2.2'
     '.github/workflows/codeql.yml':
         - 'actions/checkout@v7'
         - 'github/codeql-action@v4.38.0'
@@ -34,6 +41,11 @@ dependencies:
         commit: 'sha1-3d3c42e5aac5ba805825da76410c181273ba90b1'
         owner_id: 44036562
         repo_id: 197814629
+    'actions/checkout@v7.0.1':
+        ref: 'v7.0.1'
+        commit: 'sha1-3d3c42e5aac5ba805825da76410c181273ba90b1'
+        owner_id: 44036562
+        repo_id: 197814629
     'actions/deploy-pages@v5.0.1':
         ref: 'v5.0.1'
         commit: 'sha1-368f82528645a54fb793d4d04e342629a3f51346'
@@ -44,6 +56,11 @@ dependencies:
         commit: 'sha1-bbbca2ddaa5d8feaa63e36b76fdaad77386f024f'
         owner_id: 44036562
         repo_id: 192625955
+    'actions/upload-artifact@v7.0.1':
+        ref: 'v7.0.1'
+        commit: 'sha1-043fb46d1a93c77aae656e7c1c64a875d1fc6a0a'
+        owner_id: 44036562
+        repo_id: 192625955
     'actions/upload-pages-artifact@v5.0.0':
         ref: 'v5.0.0'
         commit: 'sha1-fc324d3547104276b827a68afc52ff2a11cc49c9'
@@ -51,6 +68,16 @@ dependencies:
         repo_id: 496012378
         uses:
             - 'actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f'
+    'erlef/setup-beam@v1.24.1':
+        ref: 'v1.24.1'
+        commit: 'sha1-54075bcc5e249e4758d363f27d099f55d843f124'
+        owner_id: 47606891
+        repo_id: 331103973
+    'gitguardian/ggshield-action@v1.54.0':
+        ref: 'v1.54.0'
+        commit: 'sha1-7059aef1ffb7d2374ce27201144f5613beecefe0'
+        owner_id: 27360172
+        repo_id: 272400318
     'github/codeql-action@v4.38.0':
         ref: 'v4.38.0'
         commit: 'sha1-b96794f015dfd88f77b49b1c93e0fa7110f94c63'
@@ -66,8 +93,18 @@ dependencies:
         commit: 'sha1-fa02766e078afaaf09b14210362cee14137e6a32'
         owner_id: 53965732
         repo_id: 202020219
+    'julia-actions/setup-julia@v3.0.2':
+        ref: 'v3.0.2'
+        commit: 'sha1-fa02766e078afaaf09b14210362cee14137e6a32'
+        owner_id: 53965732
+        repo_id: 202020219
     'peter-evans/repository-dispatch@v4.0.1':
         ref: 'v4.0.1'
         commit: 'sha1-28959ce8df70de7be546dd1250a005dd32156697'
         owner_id: 18365890
         repo_id: 220359305
+    'sonarsource/sonarqube-scan-action@v8.2.2':
+        ref: 'v8.2.2'
+        commit: 'sha1-ba9859eae8dd6bd29e412f25ddbbef3d032000f4'
+        owner_id: 545988
+        repo_id: 366408409

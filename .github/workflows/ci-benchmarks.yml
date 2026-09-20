@@ -1,3 +1,4 @@
+# This workflow is managed by gh actions-lock.
 # SPDX-License-Identifier: MPL-2.0
 # Copyright (c) 2026 Jonathan D.A. Jewell (hyperpolymath) <j.d.a.jewell@open.ac.uk>
 #
@@ -51,18 +52,18 @@ jobs:
     
     steps:
       - name: Checkout Quandledb repo
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
 
       - name: Set up Erlang/OTP
-        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124  # v1
+        uses: erlef/setup-beam@v1.24.1
         with:
           otp-version: '26'
           elixir-version: '1.16'
 
       - name: Set up Julia
-        uses: julia-actions/setup-julia@fa02766e078afaaf09b14210362cee14137e6a32  # v3
+        uses: julia-actions/setup-julia@v3.0.2
         with:
           version: '1.12'
 
@@ -89,10 +90,10 @@ jobs:
     
     steps:
       - name: Checkout Quandledb repo
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+        uses: actions/checkout@v7.0.1
 
       - name: Checkout proven benchmarks repo
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+        uses: actions/checkout@v7.0.1
         with:
           repository: ${{ env.BENCHMARKS_REPO }}
           path: proven
@@ -109,7 +110,7 @@ jobs:
           ./run.sh --all
         
       - name: Upload benchmark results
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
+        uses: actions/upload-artifact@v7.0.1
         if: always()
         with:
           name: quandledb-benchmark-results
@@ -125,12 +126,12 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
 
       - name: GitGuardian scan
-        uses: GitGuardian/ggshield-action@7059aef1ffb7d2374ce27201144f5613beecefe0  # v1
+        uses: GitGuardian/ggshield-action@v1.54.0
         with:
           args: scan repo .
         env:
@@ -145,12 +146,12 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
 
       - name: SonarQube scan
-        uses: SonarSource/sonarqube-scan-action@ba9859eae8dd6bd29e412f25ddbbef3d032000f4  # v8
+        uses: SonarSource/sonarqube-scan-action@v8.2.2
         with:
           args: >-
             -Dsonar.projectKey=quandledb
