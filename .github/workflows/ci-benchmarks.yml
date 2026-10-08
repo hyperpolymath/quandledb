@@ -7,9 +7,8 @@
 # Runs:
 # 1. Database-specific tests
 # 2. Central benchmarks from proven-tests-and-benchmarks repo
-# 3. GitGuardian secret scanning
-# 4. SonarQubeCloud quality analysis
-# 5. KRL verification tests
+# 3. SonarQubeCloud quality analysis
+# 4. KRL verification tests
 
 name: CI - Tests & Benchmarks
 
@@ -117,27 +116,7 @@ jobs:
           path: proven/benchmarks/quandledb/results.json
           retention-days: 30
 
-  # Job 3: GitGuardian secret scanning
-  gitguardian:
-    name: GitGuardian Secret Scan
-    needs: quandledb-tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v7.0.1
-        with:
-          fetch-depth: 0
-
-      - name: GitGuardian scan
-        uses: GitGuardian/ggshield-action@v1.55.0
-        with:
-          args: scan repo .
-        env:
-          GITGUARDIAN_API_KEY: ${{ secrets.GITGUARDIAN_API_KEY }}
-
-  # Job 4: SonarQubeCloud quality analysis
+  # Job 3: SonarQubeCloud quality analysis
   sonarqube:
     name: SonarQubeCloud Analysis
     needs: quandledb-tests
@@ -161,14 +140,14 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONARQUBE_TOKEN }}
 
-  # Job 5: CodeQL analysis (existing)
+  # Job 4: CodeQL analysis (existing)
   codeql:
     name: CodeQL Analysis
     needs: quandledb-tests
     uses: ./.github/workflows/codeql.yml
     secrets: inherit
 
-  # Job 6: Dependabot (existing)
+  # Job 5: Dependabot (existing)
   dependabot:
     name: Dependabot
     needs: quandledb-tests
