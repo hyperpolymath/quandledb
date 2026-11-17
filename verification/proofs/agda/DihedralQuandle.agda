@@ -1,9 +1,9 @@
-{-# OPTIONS --safe #-}
+{-# OPTIONS --safe --without-K --cubical-compatible #-}
 -- SPDX-License-Identifier: MPL-2.0
 -- Copyright (c) 2026 Jonathan D.A. Jewell (hyperpolymath) <j.d.a.jewell@open.ac.uk>
 --
 -- ===========================================================================
--- Dihedral (Takasaki) quandle axioms  —  machine-checked under `agda --safe`
+-- Dihedral (Takasaki) quandle axioms  —  machine-checked under `agda --safe --without-K --cubical-compatible`
 -- ===========================================================================
 --
 -- Discharges the algebraic core of obligation M1 ("Quandle axioms preserved")
