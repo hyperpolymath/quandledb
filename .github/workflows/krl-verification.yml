@@ -165,7 +165,7 @@ jobs:
           echo "AGDA_LIBRARIES=$AGDA_ROOT/libraries" >> "$GITHUB_ENV"
           agda --version | head -1
 
-      - name: Check Agda proofs under --safe
+      - name: Check Agda proofs under --safe --without-K --cubical-compatible
         run: |
           set -e
           shopt -s nullglob
@@ -178,15 +178,15 @@ jobs:
           esac
           found=0
           for f in $(find verification/proofs/agda -name '*.agda' 2>/dev/null); do
-            echo "── agda --safe $f"
+            echo "── agda --safe --without-K --cubical-compatible $f"
             # Run from the file's own directory so the top-level module name
             # (e.g. `DihedralQuandle`) matches the file name as Agda requires.
             # `-i .` keeps that directory a source root next to the library.
-            ( cd "$(dirname "$f")" && agda --safe -i . --library-file="$AGDA_LIBRARIES" --no-default-libraries -l standard-library "$(basename "$f")" )
+            ( cd "$(dirname "$f")" && agda --safe --without-K --cubical-compatible -i . --library-file="$AGDA_LIBRARIES" --no-default-libraries -l standard-library "$(basename "$f")" )
             found=1
           done
           if [ "$found" = "0" ]; then echo "No Agda proofs found"; exit 1; fi
-          echo "PASS: all Agda proofs check under --safe"
+          echo "PASS: all Agda proofs check under --safe --without-K --cubical-compatible"
 
   tlaplus-model-check:
     name: TLA+ model check (TLC)
