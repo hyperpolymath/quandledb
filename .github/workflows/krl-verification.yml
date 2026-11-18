@@ -149,20 +149,13 @@ jobs:
           # fail with FileNotFound once ubuntu-latest moved to resolute.
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends agda-bin
-          # Pinned agda-stdlib v2.3: the tag is checked against its commit, so
-          # a moved tag fails here instead of changing what the proofs check.
-          STDLIB_TAG=v2.3
-          STDLIB_COMMIT=8326c7475af1fa456ca04a0203c168d5d7ff842b
-          AGDA_ROOT="$RUNNER_TEMP/agda"
-          mkdir -p "$AGDA_ROOT"
-          git -c advice.detachedHead=false clone -q --depth 1 --branch "$STDLIB_TAG" \
-            https://github.com/agda/agda-stdlib.git "$AGDA_ROOT/agda-stdlib"
-          have="$(git -C "$AGDA_ROOT/agda-stdlib" rev-parse HEAD)"
-          [ "$have" = "$STDLIB_COMMIT" ] || { echo "::error::agda-stdlib $STDLIB_TAG is $have, expected $STDLIB_COMMIT"; exit 1; }
-          # Project-local libraries file, passed with --library-file below;
-          # nothing under ~/.agda is read or written.
-          printf '%s\n' "$AGDA_ROOT/agda-stdlib/standard-library.agda-lib" > "$AGDA_ROOT/libraries"
-          echo "AGDA_LIBRARIES=$AGDA_ROOT/libraries" >> "$GITHUB_ENV"
+          # Shared pinned provisioning script, copied byte-identically from
+          # hyperpolymath/rsr-template-repo scripts/provision-agda-stdlib.sh
+          # (template commit 4a72fe74b83593dd636d9535154bf16060005221). It clones
+          # agda-stdlib v2.3, checks the tag against its commit, writes a project
+          # libraries file, appends AGDA_LIBRARIES to GITHUB_ENV, and fails when
+          # Agda is older than 2.7.0. Nothing under ~/.agda is read or written.
+          bash scripts/provision-agda-stdlib.sh "$RUNNER_TEMP/agda/agda-stdlib"
           agda --version | head -1
 
       - name: Check Agda proofs under --safe --without-K --cubical-compatible
