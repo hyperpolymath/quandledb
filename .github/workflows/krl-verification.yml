@@ -139,32 +139,50 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7.0.1
 
-      - name: Install Agda + standard library
+      - name: Install Agda + pinned standard library
         run: |
           set -euo pipefail
+          # Agda binary from apt; the standard library is NOT taken from apt.
+          # The packaged agda-stdlib differs between runner images: noble ships
+          # no .agda-lib, resolute ships one with `include: src`. Overwriting it
+          # with `include: .` (the previous step) made every `import Data.*`
+          # fail with FileNotFound once ubuntu-latest moved to resolute.
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends agda agda-stdlib
-          # Ubuntu ships the stdlib source but omits its .agda-lib registration.
-          printf 'name: standard-library\ninclude: .\n' \
-            | sudo tee /usr/share/agda-stdlib/standard-library.agda-lib >/dev/null
-          mkdir -p "$HOME/.agda"
-          echo /usr/share/agda-stdlib/standard-library.agda-lib > "$HOME/.agda/libraries"
-          echo standard-library > "$HOME/.agda/defaults"
-          # Agda writes interface (.agdai) files into the library's _build dir;
-          # the apt stdlib is root-owned, so make it writable for the (non-root)
-          # runner user that invokes `agda`.
-          sudo chmod -R a+rwX /usr/share/agda-stdlib
+          sudo apt-get install -y --no-install-recommends agda-bin
+          # Pinned agda-stdlib v2.3: the tag is checked against its commit, so
+          # a moved tag fails here instead of changing what the proofs check.
+          STDLIB_TAG=v2.3
+          STDLIB_COMMIT=8326c7475af1fa456ca04a0203c168d5d7ff842b
+          AGDA_ROOT="$RUNNER_TEMP/agda"
+          mkdir -p "$AGDA_ROOT"
+          git -c advice.detachedHead=false clone -q --depth 1 --branch "$STDLIB_TAG" \
+            https://github.com/agda/agda-stdlib.git "$AGDA_ROOT/agda-stdlib"
+          have="$(git -C "$AGDA_ROOT/agda-stdlib" rev-parse HEAD)"
+          [ "$have" = "$STDLIB_COMMIT" ] || { echo "::error::agda-stdlib $STDLIB_TAG is $have, expected $STDLIB_COMMIT"; exit 1; }
+          # Project-local libraries file, passed with --library-file below;
+          # nothing under ~/.agda is read or written.
+          printf '%s\n' "$AGDA_ROOT/agda-stdlib/standard-library.agda-lib" > "$AGDA_ROOT/libraries"
+          echo "AGDA_LIBRARIES=$AGDA_ROOT/libraries" >> "$GITHUB_ENV"
+          agda --version | head -1
 
       - name: Check Agda proofs under --safe
         run: |
           set -e
           shopt -s nullglob
+          # Agda prints non-ASCII identifiers in its diagnostics; under a POSIX
+          # locale it dies with "commitBuffer: invalid argument" (exit 42)
+          # instead of reporting. Keep the caller's locale when it is UTF-8.
+          case "${LC_ALL:-${LC_CTYPE:-${LANG:-}}}" in
+            *[Uu][Tt][Ff]-8* | *[Uu][Tt][Ff]8*) ;;
+            *) export LC_ALL=C.UTF-8 ;;
+          esac
           found=0
           for f in $(find verification/proofs/agda -name '*.agda' 2>/dev/null); do
             echo "── agda --safe $f"
             # Run from the file's own directory so the top-level module name
             # (e.g. `DihedralQuandle`) matches the file name as Agda requires.
-            ( cd "$(dirname "$f")" && LC_ALL=C.UTF-8 agda --safe "$(basename "$f")" )
+            # `-i .` keeps that directory a source root next to the library.
+            ( cd "$(dirname "$f")" && agda --safe -i . --library-file="$AGDA_LIBRARIES" --no-default-libraries -l standard-library "$(basename "$f")" )
             found=1
           done
           if [ "$found" = "0" ]; then echo "No Agda proofs found"; exit 1; fi
