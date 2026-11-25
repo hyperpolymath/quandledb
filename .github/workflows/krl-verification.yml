@@ -139,32 +139,43 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7.0.1
 
-      - name: Install Agda + standard library
+      - name: Install Agda + pinned standard library
         run: |
           set -euo pipefail
+          # Agda binary from apt; the standard library is NOT taken from apt.
+          # The packaged agda-stdlib differs between runner images: noble ships
+          # no .agda-lib, resolute ships one with `include: src`. Overwriting it
+          # with `include: .` (the previous step) made every `import Data.*`
+          # fail with FileNotFound once ubuntu-latest moved to resolute.
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends agda agda-stdlib
-          # Ubuntu ships the stdlib source but omits its .agda-lib registration.
-          printf 'name: standard-library\ninclude: .\n' \
-            | sudo tee /usr/share/agda-stdlib/standard-library.agda-lib >/dev/null
-          mkdir -p "$HOME/.agda"
-          echo /usr/share/agda-stdlib/standard-library.agda-lib > "$HOME/.agda/libraries"
-          echo standard-library > "$HOME/.agda/defaults"
-          # Agda writes interface (.agdai) files into the library's _build dir;
-          # the apt stdlib is root-owned, so make it writable for the (non-root)
-          # runner user that invokes `agda`.
-          sudo chmod -R a+rwX /usr/share/agda-stdlib
+          sudo apt-get install -y --no-install-recommends agda-bin
+          # Shared pinned provisioning script, copied byte-identically from
+          # hyperpolymath/rsr-template-repo scripts/provision-agda-stdlib.sh
+          # (template commit 4a72fe74b83593dd636d9535154bf16060005221). It clones
+          # agda-stdlib v2.3, checks the tag against its commit, writes a project
+          # libraries file, appends AGDA_LIBRARIES to GITHUB_ENV, and fails when
+          # Agda is older than 2.7.0. Nothing under ~/.agda is read or written.
+          bash scripts/provision-agda-stdlib.sh "$RUNNER_TEMP/agda/agda-stdlib"
+          agda --version | head -1
 
       - name: Check Agda proofs under --safe --without-K --cubical-compatible
         run: |
           set -e
           shopt -s nullglob
+          # Agda prints non-ASCII identifiers in its diagnostics; under a POSIX
+          # locale it dies with "commitBuffer: invalid argument" (exit 42)
+          # instead of reporting. Keep the caller's locale when it is UTF-8.
+          case "${LC_ALL:-${LC_CTYPE:-${LANG:-}}}" in
+            *[Uu][Tt][Ff]-8* | *[Uu][Tt][Ff]8*) ;;
+            *) export LC_ALL=C.UTF-8 ;;
+          esac
           found=0
           for f in $(find verification/proofs/agda -name '*.agda' 2>/dev/null); do
             echo "── agda --safe --without-K --cubical-compatible $f"
             # Run from the file's own directory so the top-level module name
             # (e.g. `DihedralQuandle`) matches the file name as Agda requires.
-            ( cd "$(dirname "$f")" && LC_ALL=C.UTF-8 agda --safe --without-K --cubical-compatible "$(basename "$f")" )
+            # `-i .` keeps that directory a source root next to the library.
+            ( cd "$(dirname "$f")" && agda --safe --without-K --cubical-compatible -i . --library-file="$AGDA_LIBRARIES" --no-default-libraries -l standard-library "$(basename "$f")" )
             found=1
           done
           if [ "$found" = "0" ]; then echo "No Agda proofs found"; exit 1; fi
